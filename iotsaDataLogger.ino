@@ -17,7 +17,7 @@
 #undef WITH_FILESUPLOAD  // Enable upload of static files for webserver
 #undef WITH_FILESBACKUP  // Enable backup of all files including config files and webserver files
 
-IotsaApplication application("Iotsa Sensor Server");
+IotsaApplication application("Iotsa Data Logger Server");
 IotsaWifiMod wifiMod(application);
 
 #ifdef WITH_NTP
@@ -45,8 +45,8 @@ IotsaFilesUploadMod filesUploadMod(application);
 IotsaFilesBackupMod filesBackupMod(application);
 #endif
 
-#include "iotsaSensor.h"
-IotsaSensorMod iotsaSensorMod(application);
+#include "iotsaDataLogger.h"
+IotsaDataLoggerMod iotsaDataLoggerMod(application);
 
 void setup(void){
   application.setup();

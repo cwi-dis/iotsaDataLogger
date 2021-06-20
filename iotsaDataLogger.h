@@ -1,32 +1,32 @@
-#ifndef _IOTSASENSOR_H_
-#define _IOTSASENSOR_H_
+#ifndef _IOTSADATALOGGER_H_
+#define _IOTSADATALOGGER_H_
 #include "iotsa.h"
 #include "iotsaApi.h"
 
-typedef uint16_t SensorBufferItemValueType;
+typedef uint16_t DataLoggerBufferItemValueType;
 typedef struct {
-  SensorBufferItemValueType value;
+  DataLoggerBufferItemValueType value;
   uint32_t timestamp;
-} SensorBufferItem;
+} DataLoggerBufferItem;
 
-#define SENSORBUFFERSIZE 1024
-#define SENSORBUFFERMINSIZE 512
-class SensorBuffer
+#define DATALOGGERBUFFERSIZE 1024
+#define DATALOGGERBUFFERMINSIZE 512
+class DataLoggerBuffer
 {
 public:
-  SensorBuffer()
+  DataLoggerBuffer()
   : nItem(0)
   {}
-  void add(SensorBufferItemValueType value);
+  void add(DataLoggerBufferItemValueType value);
   void compact();
   void toJSON(JsonObject& reply);
   int nItem;
-  SensorBufferItem items[SENSORBUFFERSIZE];
+  DataLoggerBufferItem items[DATALOGGERBUFFERSIZE];
 };
 
-class IotsaSensorMod : public IotsaApiMod {
+class IotsaDataLoggerMod : public IotsaApiMod {
 public:
-  IotsaSensorMod(IotsaApplication &_app) : IotsaApiMod(_app) {}
+  IotsaDataLoggerMod(IotsaApplication &_app) : IotsaApiMod(_app) {}
   void setup() override;
   void serverSetup() override;
   void loop() override;
@@ -40,7 +40,7 @@ protected:
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
   int interval;
   uint32_t lastReading;
-  SensorBuffer buffer;
+  DataLoggerBuffer buffer;
 };
 
 #endif

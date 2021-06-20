@@ -1,9 +1,9 @@
-#include "iotsaSensor.h"
+#include "iotsaDataLogger.h"
 #include "iotsaConfigFile.h"
 
 #ifdef IOTSA_WITH_WEB
 void
-IotsaSensorMod::handler() {
+IotsaDataLoggerMod::handler() {
   bool anyChanged = false;
   if( server->hasArg("interval")) {
     if (needsAuthentication()) return;
@@ -13,26 +13,26 @@ IotsaSensorMod::handler() {
   }
   if (anyChanged) configSave();
 
-  String message = "<html><head><title>Timed Sensor Module</title></head><body><h1>Timed Sensor Module</h1>";
+  String message = "<html><head><title>Timed Data Logger Module</title></head><body><h1>Timed Data Logger Module</h1>";
   message += "<form method='get'>Interval (ms): <input name='interval' value='";
   message += String(interval);
   message += "'><br><input type='submit'></form>";
   server->send(200, "text/html", message);
 }
 
-String IotsaSensorMod::info() {
-  String message = "<p>Timed sensor readings. See <a href=\"/sensor\">/sensor</a> for configuration, <a href=\"/api\">/api</a> for readings.</p>";
+String IotsaDataLoggerMod::info() {
+  String message = "<p>Timed sensor readings. See <a href=\"/datalogger\">/datalogger</a> for configuration, <a href=\"/api\">/api</a> for readings.</p>";
   return message;
 }
 #endif // IOTSA_WITH_WEB
 
-bool IotsaSensorMod::getHandler(const char *path, JsonObject& reply) {
+bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
   buffer.toJSON(reply);
   reply["interval"] = interval;
   return true;
 }
 
-bool IotsaSensorMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   if (!request.is<JsonObject>()) return false;
   JsonObject reqObj = request.as<JsonObject>();
   if (!reqObj.containsKey("interval")) return false;
@@ -41,30 +41,30 @@ bool IotsaSensorMod::putHandler(const char *path, const JsonVariant& request, Js
   return true;
 }
 
-void IotsaSensorMod::setup() {
+void IotsaDataLoggerMod::setup() {
   configLoad();
 }
 
-void IotsaSensorMod::serverSetup() {
+void IotsaDataLoggerMod::serverSetup() {
 #ifdef IOTSA_WITH_WEB
-  server->on("/sensor", std::bind(&IotsaSensorMod::handler, this));
+  server->on("/datalogger", std::bind(&IotsaDataLoggerMod::handler, this));
 #endif
-  api.setup("/api/sensor", true, true);
-  name = "sensor";
+  api.setup("/api/datalogger", true, true);
+  name = "datalogger";
 }
 
-void IotsaSensorMod::configLoad() {
-  IotsaConfigFileLoad cf("/config/sensor.cfg");
+void IotsaDataLoggerMod::configLoad() {
+  IotsaConfigFileLoad cf("/config/datalogger.cfg");
   cf.get("interval", interval, 1000);
  
 }
 
-void IotsaSensorMod::configSave() {
-  IotsaConfigFileSave cf("/config/sensor.cfg");
+void IotsaDataLoggerMod::configSave() {
+  IotsaConfigFileSave cf("/config/datalogger.cfg");
   cf.put("interval", interval);
 }
 
-void IotsaSensorMod::loop() {
+void IotsaDataLoggerMod::loop() {
   if (millis() >= lastReading + interval) {
     lastReading = millis();
     int value = analogRead(A0);
@@ -72,23 +72,23 @@ void IotsaSensorMod::loop() {
   }
 }
 
-void SensorBuffer::add(SensorBufferItemValueType value)
+void DataLoggerBuffer::add(DataLoggerBufferItemValueType value)
 {
-  if (nItem >= SENSORBUFFERSIZE) compact();
+  if (nItem >= DATALOGGERBUFFERSIZE) compact();
   items[nItem].value = value;
   items[nItem].timestamp = millis();
   nItem++;
 }
 
-void SensorBuffer::compact()
+void DataLoggerBuffer::compact()
 {
-  int toRemove = nItem - SENSORBUFFERMINSIZE;
+  int toRemove = nItem - DATALOGGERBUFFERMINSIZE;
   if (toRemove <= 0) return;
-  memmove(items, items+toRemove, SENSORBUFFERMINSIZE*sizeof(SensorBufferItem));
+  memmove(items, items+toRemove, DATALOGGERBUFFERMINSIZE*sizeof(DataLoggerBufferItem));
   nItem -= toRemove;
 }
 
-void SensorBuffer::toJSON(JsonObject &replyObj)
+void DataLoggerBuffer::toJSON(JsonObject &replyObj)
 {
   if (nItem == 0) return;
   uint32_t curTime = items[0].timestamp;
