@@ -14,14 +14,16 @@ IotsaDataLoggerMod::handler() {
   if (anyChanged) configSave();
 
   String message = "<html><head><title>Timed Data Logger Module</title></head><body><h1>Timed Data Logger Module</h1>";
-  message += "<form method='get'>Interval (ms): <input name='interval' value='";
+  message += "<form method='get'>Interval (seconds): <input name='interval' value='";
   message += String(interval);
   message += "'><br><input type='submit'></form>";
+  buffer.toHTML(message);
+  message += "</body></html>";
   server->send(200, "text/html", message);
 }
 
 String IotsaDataLoggerMod::info() {
-  String message = "<p>Timed sensor readings. See <a href=\"/datalogger\">/datalogger</a> for configuration, <a href=\"/api\">/api</a> for readings.</p>";
+  String message = "<p>Timed data logger. See <a href=\"/datalogger\">/datalogger</a> for configuration, <a href=\"/api/datalogger\">/api</a> for readings.</p>";
   return message;
 }
 #endif // IOTSA_WITH_WEB
@@ -65,18 +67,20 @@ void IotsaDataLoggerMod::configSave() {
 }
 
 void IotsaDataLoggerMod::loop() {
-  if (millis() >= lastReading + interval) {
-    lastReading = millis();
+  timestamp_type now = GET_TIMESTAMP();
+  if (now >= lastReading + interval) {
+    lastReading = now;
+    // xxxx save lastReading in NVM
     int value = analogRead(A0);
-    buffer.add(value);
+    buffer.add(now, value);
   }
 }
 
-void DataLoggerBuffer::add(DataLoggerBufferItemValueType value)
+void DataLoggerBuffer::add(timestamp_type ts, DataLoggerBufferItemValueType value)
 {
   if (nItem >= DATALOGGERBUFFERSIZE) compact();
   items[nItem].value = value;
-  items[nItem].timestamp = millis();
+  items[nItem].timestamp = ts;
   nItem++;
 }
 
@@ -90,17 +94,31 @@ void DataLoggerBuffer::compact()
 
 void DataLoggerBuffer::toJSON(JsonObject &replyObj)
 {
-  if (nItem == 0) return;
-  uint32_t curTime = items[0].timestamp;
-  replyObj["timestamp"] = curTime;
+  replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
   JsonArray values = replyObj.createNestedArray("data");
 
   for (int i=0; i<nItem; i++) {
-    uint32_t delta = items[i].timestamp-curTime;
     JsonObject curValue = values.createNestedObject();
-    curValue["dt"] = delta;
+    curValue["t"] = FORMAT_TIMESTAMP(items[i].timestamp);
     curValue["v"] = items[i].value;
-    curTime = items[i].timestamp;
   }
 }
 
+void DataLoggerBuffer::toHTML(String& reply)
+{
+  reply += "<h2>Recent values</h2><p>Current time: ";
+  auto ts = FORMAT_TIMESTAMP(GET_TIMESTAMP());
+  reply += ts.c_str();
+  reply += "</p>";
+
+  reply += "<table><th><td>Time</td><td>Value</td>";
+  for (int i=0; i<nItem; i++) {
+    reply += "<tr><td>";
+    auto ts = FORMAT_TIMESTAMP(items[i].timestamp);
+    reply += ts.c_str();
+    reply += "</td><td>";
+    reply += String(items[i].value);
+    reply += "</td></tr>";
+  }
+  reply += "</table>";
+}

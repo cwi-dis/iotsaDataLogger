@@ -11,7 +11,8 @@
 
 // CHANGE: Add application includes and declarations here
 
-#undef WITH_NTP    // Use network time protocol to synchronize the clock.
+#define WITH_NTP    // Use network time protocol to synchronize the clock.
+#define WITH_RTC    // Backup time from an RTC module
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 #undef WITH_FILES  // Enable static files webserver
 #undef WITH_FILESUPLOAD  // Enable upload of static files for webserver
@@ -23,6 +24,15 @@ IotsaWifiMod wifiMod(application);
 #ifdef WITH_NTP
 #include "iotsaNtp.h"
 IotsaNtpMod ntpMod(application);
+#endif
+
+#ifdef WITH_RTC
+#define PIN_ENA 23
+#define PIN_CLK 21
+#define PIN_DAT 22
+
+#include "iotsaRtc.h"
+IotsaRtcMod rtcMod(application, PIN_ENA, PIN_CLK, PIN_DAT);
 #endif
 
 #ifdef WITH_OTA

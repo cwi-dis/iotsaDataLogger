@@ -3,10 +3,20 @@
 #include "iotsa.h"
 #include "iotsaApi.h"
 
+typedef time_t timestamp_type;
+#define GET_TIMESTAMP() (time(nullptr))
+inline std::string FORMAT_TIMESTAMP(timestamp_type ts) {
+  struct tm *tm = localtime(&ts);
+  char buf[25];
+  size_t sz = strftime(buf,  sizeof buf, "%Y-%m-%dT%H:%M:%S", tm);
+  return std::string(buf, sz);
+}
+
 typedef uint16_t DataLoggerBufferItemValueType;
+
 typedef struct {
   DataLoggerBufferItemValueType value;
-  uint32_t timestamp;
+  timestamp_type timestamp;
 } DataLoggerBufferItem;
 
 #define DATALOGGERBUFFERSIZE 1024
@@ -17,9 +27,10 @@ public:
   DataLoggerBuffer()
   : nItem(0)
   {}
-  void add(DataLoggerBufferItemValueType value);
+  void add(timestamp_type ts, DataLoggerBufferItemValueType value);
   void compact();
   void toJSON(JsonObject& reply);
+  void toHTML(String& reply);
   int nItem;
   DataLoggerBufferItem items[DATALOGGERBUFFERSIZE];
 };
