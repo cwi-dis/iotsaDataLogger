@@ -27,7 +27,7 @@ jobs:
     strategy:
       matrix:
         board:
-        - nodemcuv2
+        - pico32
         - esp32thing
         build_flags: [""]
 
