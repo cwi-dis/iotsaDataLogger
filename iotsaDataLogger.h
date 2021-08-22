@@ -61,7 +61,8 @@ protected:
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
   int interval;
   uint32_t lastReading;
-  float analogConversionFactor;
+  float adcMultiply;
+  float adcOffset;
   DataLoggerBuffer buffer;
 };
 

@@ -11,10 +11,16 @@ IotsaDataLoggerMod::handler() {
     interval = sInterval.toInt();
     anyChanged = true;
   }
-  if( server->hasArg("analogConversionFactor")) {
+  if( server->hasArg("adcMultiply")) {
     if (needsAuthentication()) return;
-    String sv = server->arg("analogConversionFactor");
-    analogConversionFactor = sv.toFloat();
+    String sv = server->arg("adcMultiply");
+    adcMultiply = sv.toFloat();
+    anyChanged = true;
+  }
+  if( server->hasArg("adcOffset")) {
+    if (needsAuthentication()) return;
+    String sv = server->arg("adcOffset");
+    adcOffset = sv.toFloat();
     anyChanged = true;
   }
   if (anyChanged) configSave();
@@ -22,8 +28,10 @@ IotsaDataLoggerMod::handler() {
   String message = "<html><head><title>Timed Data Logger Module</title></head><body><h1>Timed Data Logger Module</h1>";
   message += "<form method='get'>Interval (seconds): <input name='interval' value='";
   message += String(interval);
-  message += "'><br>Analog Conversion Factor: <input name='analogConversionFactor' value='";
-  message += String(analogConversionFactor);
+  message += "'><br>ADC multiplication factor: <input name='adcMultiply' value='";
+  message += String(adcMultiply, 3);
+  message += "'><br>ADC offset: <input name='adcOffset' value='";
+  message += String(adcOffset, 3);
   message += "'><br><input type='submit'></form>";
   buffer.toHTML(message);
   message += "</body></html>";
@@ -39,7 +47,8 @@ String IotsaDataLoggerMod::info() {
 bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
   buffer.toJSON(reply);
   reply["interval"] = interval;
-  reply["analogConversionFactor"] = analogConversionFactor;
+  reply["adcMultiply"] = adcMultiply;
+  reply["adcOffset"] = adcOffset;
   return true;
 }
 
@@ -51,8 +60,12 @@ bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request
     interval = reqObj["interval"];
     anyChanged = true;
   }
-  if (reqObj.containsKey("analogConversionFactor")) {
-    analogConversionFactor = reqObj["analogConversionFactor"];
+  if (reqObj.containsKey("adcMultiply")) {
+    adcMultiply = reqObj["adcMultiply"];
+    anyChanged = true;
+  }
+  if (reqObj.containsKey("adcOffset")) {
+    adcOffset = reqObj["adcOffset"];
     anyChanged = true;
   }
   if (anyChanged) {
@@ -63,6 +76,13 @@ bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request
 
 void IotsaDataLoggerMod::setup() {
   configLoad();
+  //
+  // The esp32 ADC seems to have pretty bad linearity.
+  // Attempting to fix based on https://www.esp32.com/viewtopic.php?t=2881
+  // and https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/adc.html
+  //
+  analogSetWidth(10);
+  analogSetPinAttenuation(PIN_ANALOG_IN, ADC_6db);
 }
 
 void IotsaDataLoggerMod::serverSetup() {
@@ -76,14 +96,16 @@ void IotsaDataLoggerMod::serverSetup() {
 void IotsaDataLoggerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/datalogger.cfg");
   cf.get("interval", interval, 10);
-  cf.get("analogConversionFactor", analogConversionFactor, 1);
+  cf.get("adcMultiply", adcMultiply, 1);
+  cf.get("adcOffset", adcOffset, 0);
  
 }
 
 void IotsaDataLoggerMod::configSave() {
   IotsaConfigFileSave cf("/config/datalogger.cfg");
   cf.put("interval", interval);
-  cf.put("analogConversionFactor", analogConversionFactor);
+  cf.put("adcMultiply", adcMultiply);
+  cf.put("adcOffset", adcOffset);
 }
 
 void IotsaDataLoggerMod::loop() {
@@ -95,7 +117,7 @@ void IotsaDataLoggerMod::loop() {
     lastReading = now;
     // xxxx save lastReading in NVM
     int iValue = analogRead(PIN_ANALOG_IN);
-    float value = iValue * 3.3 * analogConversionFactor / 4096.0;
+    float value = iValue * adcMultiply + adcOffset;
     IotsaSerial.printf("xxxjack value=%f\n", value);
     buffer.add(now, value);
   }
