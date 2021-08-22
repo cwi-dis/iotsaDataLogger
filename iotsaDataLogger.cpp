@@ -11,11 +11,19 @@ IotsaDataLoggerMod::handler() {
     interval = sInterval.toInt();
     anyChanged = true;
   }
+  if( server->hasArg("analogConversionFactor")) {
+    if (needsAuthentication()) return;
+    String sv = server->arg("analogConversionFactor");
+    analogConversionFactor = sv.toFloat();
+    anyChanged = true;
+  }
   if (anyChanged) configSave();
 
   String message = "<html><head><title>Timed Data Logger Module</title></head><body><h1>Timed Data Logger Module</h1>";
   message += "<form method='get'>Interval (seconds): <input name='interval' value='";
   message += String(interval);
+  message += "'><br>Analog Conversion Factor: <input name='analogConversionFactor' value='";
+  message += String(analogConversionFactor);
   message += "'><br><input type='submit'></form>";
   buffer.toHTML(message);
   message += "</body></html>";
@@ -23,7 +31,7 @@ IotsaDataLoggerMod::handler() {
 }
 
 String IotsaDataLoggerMod::info() {
-  String message = "<p>Timed data logger. See <a href=\"/datalogger\">/datalogger</a> for configuration, <a href=\"/api/datalogger\">/api</a> for readings.</p>";
+  String message = "<p>Timed data logger. See <a href=\"/datalogger\">/datalogger</a> for configuration, <a href=\"/api/datalogger\">/api/datalogger</a> for readings.</p>";
   return message;
 }
 #endif // IOTSA_WITH_WEB
@@ -31,16 +39,26 @@ String IotsaDataLoggerMod::info() {
 bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
   buffer.toJSON(reply);
   reply["interval"] = interval;
+  reply["analogConversionFactor"] = analogConversionFactor;
   return true;
 }
 
 bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   if (!request.is<JsonObject>()) return false;
   JsonObject reqObj = request.as<JsonObject>();
-  if (!reqObj.containsKey("interval")) return false;
-  interval = reqObj["interval"];
-  configSave();
-  return true;
+  bool anyChanged = false;
+  if (reqObj.containsKey("interval")) {
+    interval = reqObj["interval"];
+    anyChanged = true;
+  }
+  if (reqObj.containsKey("analogConversionFactor")) {
+    analogConversionFactor = reqObj["analogConversionFactor"];
+    anyChanged = true;
+  }
+  if (anyChanged) {
+    configSave();
+  }
+  return anyChanged;
 }
 
 void IotsaDataLoggerMod::setup() {
@@ -57,21 +75,28 @@ void IotsaDataLoggerMod::serverSetup() {
 
 void IotsaDataLoggerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/datalogger.cfg");
-  cf.get("interval", interval, 1000);
+  cf.get("interval", interval, 10);
+  cf.get("analogConversionFactor", analogConversionFactor, 1);
  
 }
 
 void IotsaDataLoggerMod::configSave() {
   IotsaConfigFileSave cf("/config/datalogger.cfg");
   cf.put("interval", interval);
+  cf.put("analogConversionFactor", analogConversionFactor);
 }
 
 void IotsaDataLoggerMod::loop() {
   timestamp_type now = GET_TIMESTAMP();
-  if (now >= lastReading + interval) {
+  if (
+      now >= lastReading + interval // Normal: interval has passed
+      || now < lastReading - interval // Abnormal: clock has gone back in time.
+    ) {
     lastReading = now;
     // xxxx save lastReading in NVM
-    int value = analogRead(A0);
+    int iValue = analogRead(PIN_ANALOG_IN);
+    float value = iValue * 3.3 * analogConversionFactor / 4096.0;
+    IotsaSerial.printf("xxxjack value=%f\n", value);
     buffer.add(now, value);
   }
 }
@@ -111,7 +136,7 @@ void DataLoggerBuffer::toHTML(String& reply)
   reply += ts.c_str();
   reply += "</p>";
 
-  reply += "<table><th><td>Time</td><td>Value</td>";
+  reply += "<table><tr><th>Time</th><th>Value</th></tr>";
   for (int i=0; i<nItem; i++) {
     reply += "<tr><td>";
     auto ts = FORMAT_TIMESTAMP(items[i].timestamp);

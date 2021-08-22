@@ -3,6 +3,11 @@
 #include "iotsa.h"
 #include "iotsaApi.h"
 
+//
+// Definitions for using NTP/RTC/Unix time.
+// May still be changed back to using millis() timestamps from boot,
+// but needs work.
+//
 typedef time_t timestamp_type;
 #define GET_TIMESTAMP() (time(nullptr))
 inline std::string FORMAT_TIMESTAMP(timestamp_type ts) {
@@ -12,7 +17,12 @@ inline std::string FORMAT_TIMESTAMP(timestamp_type ts) {
   return std::string(buf, sz);
 }
 
-typedef uint16_t DataLoggerBufferItemValueType;
+//
+// Input pin
+//
+#define PIN_ANALOG_IN 34
+
+typedef float DataLoggerBufferItemValueType;
 
 typedef struct {
   DataLoggerBufferItemValueType value;
@@ -51,6 +61,7 @@ protected:
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
   int interval;
   uint32_t lastReading;
+  float analogConversionFactor;
   DataLoggerBuffer buffer;
 };
 
