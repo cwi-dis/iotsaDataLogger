@@ -59,7 +59,6 @@ jobs:
       with:
         repository: lorol/LITTLEFS
         path: CustomLibrary_LittleFS
-        ref: 1.0 
 
     - name: Arduino build
       uses: ArminJo/arduino-test-compile@v3
