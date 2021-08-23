@@ -28,7 +28,7 @@ protected:
   uint32_t lastReading;
   float adcMultiply;
   float adcOffset;
-  DataLoggerBuffer buffer;
+  DataStoreMemory buffer;
 };
 
 #endif

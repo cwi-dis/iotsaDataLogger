@@ -18,14 +18,16 @@ inline std::string FORMAT_TIMESTAMP(timestamp_type ts) {
   return std::string(buf, sz);
 }
 
-typedef float DataLoggerBufferItemValueType;
+typedef float dataStoreItem;
 
 class DataStore
 {
 public:
   virtual ~DataStore() {}
-  virtual void add(timestamp_type ts, const DataLoggerBufferItemValueType& value) = 0;
+  virtual void add(timestamp_type ts, const dataStoreItem& value) = 0;
   virtual void compact() = 0;
+  virtual bool should_compact() = 0;
+  virtual void forget(timestamp_type ts) = 0;
   virtual void toJSON(JsonObject& reply) = 0;
   virtual void toHTML(String& reply) = 0;
 };
