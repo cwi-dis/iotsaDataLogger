@@ -1,0 +1,33 @@
+#ifndef _DATASTORE_H_
+#define _DATASTORE_H_
+
+#include "iotsa.h"
+#include "iotsaApi.h"
+
+//
+// Definitions for using NTP/RTC/Unix time.
+// May still be changed back to using millis() timestamps from boot,
+// but needs work.
+//
+typedef time_t timestamp_type;
+#define GET_TIMESTAMP() (time(nullptr))
+inline std::string FORMAT_TIMESTAMP(timestamp_type ts) {
+  struct tm *tm = localtime(&ts);
+  char buf[25];
+  size_t sz = strftime(buf,  sizeof buf, "%Y-%m-%dT%H:%M:%S", tm);
+  return std::string(buf, sz);
+}
+
+typedef float DataLoggerBufferItemValueType;
+
+class DataStore
+{
+public:
+  virtual ~DataStore() {}
+  virtual void add(timestamp_type ts, const DataLoggerBufferItemValueType& value) = 0;
+  virtual void compact() = 0;
+  virtual void toJSON(JsonObject& reply) = 0;
+  virtual void toHTML(String& reply) = 0;
+};
+
+#endif

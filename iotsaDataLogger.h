@@ -2,48 +2,13 @@
 #define _IOTSADATALOGGER_H_
 #include "iotsa.h"
 #include "iotsaApi.h"
-
-//
-// Definitions for using NTP/RTC/Unix time.
-// May still be changed back to using millis() timestamps from boot,
-// but needs work.
-//
-typedef time_t timestamp_type;
-#define GET_TIMESTAMP() (time(nullptr))
-inline std::string FORMAT_TIMESTAMP(timestamp_type ts) {
-  struct tm *tm = localtime(&ts);
-  char buf[25];
-  size_t sz = strftime(buf,  sizeof buf, "%Y-%m-%dT%H:%M:%S", tm);
-  return std::string(buf, sz);
-}
+#include "dataStore.h"
+#include "dataStoreMemory.h"
 
 //
 // Input pin
 //
 #define PIN_ANALOG_IN 34
-
-typedef float DataLoggerBufferItemValueType;
-
-typedef struct {
-  DataLoggerBufferItemValueType value;
-  timestamp_type timestamp;
-} DataLoggerBufferItem;
-
-#define DATALOGGERBUFFERSIZE 1024
-#define DATALOGGERBUFFERMINSIZE 512
-class DataLoggerBuffer
-{
-public:
-  DataLoggerBuffer()
-  : nItem(0)
-  {}
-  void add(timestamp_type ts, DataLoggerBufferItemValueType value);
-  void compact();
-  void toJSON(JsonObject& reply);
-  void toHTML(String& reply);
-  int nItem;
-  DataLoggerBufferItem items[DATALOGGERBUFFERSIZE];
-};
 
 class IotsaDataLoggerMod : public IotsaApiMod {
 public:

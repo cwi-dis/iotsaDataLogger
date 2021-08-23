@@ -123,7 +123,7 @@ void IotsaDataLoggerMod::loop() {
   }
 }
 
-void DataLoggerBuffer::add(timestamp_type ts, DataLoggerBufferItemValueType value)
+void DataLoggerBuffer::add(timestamp_type ts, const DataLoggerBufferItemValueType& value)
 {
   if (nItem >= DATALOGGERBUFFERSIZE) compact();
   items[nItem].value = value;
