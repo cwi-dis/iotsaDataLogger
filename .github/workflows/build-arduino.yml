@@ -48,12 +48,19 @@ jobs:
           path: CustomLibrary_iotsa
           ref: ${{ env.iotsa_ref }}
       
-    - name: Install constom libraries
+    - name: Checkout custom library ArduinoJWT
       uses: actions/checkout@v2
       with:
-          repository: yutter/ArduinoJWT
-          path: CustomLibrary_ArduinoJWT
-      
+        repository: yutter/ArduinoJWT
+        path: CustomLibrary_ArduinoJWT 
+
+    - name: Checkout custom library LittleFS
+      uses: actions/checkout@v2
+      with:
+        repository: lorol/LITTLEFS
+        path: CustomLibrary_LittleFS
+        ref: 1.0 
+
     - name: Arduino build
       uses: ArminJo/arduino-test-compile@v3
       with:
