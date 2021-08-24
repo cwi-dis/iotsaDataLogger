@@ -26,6 +26,7 @@ class DataStore
 public:
   virtual ~DataStore() {}
   virtual void add(timestamp_type ts, const dataStoreItem& value) = 0;
+  virtual timestamp_type latest() = 0;
   virtual void compact() = 0;
   virtual bool should_compact() = 0;
   virtual void forget(timestamp_type ts) = 0;

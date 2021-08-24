@@ -1,6 +1,6 @@
-#include "dataStoreMemory.h"
+#include "dataStoreFile.h"
 
-void DataStoreMemory::add(timestamp_type ts, const dataStoreItem& value)
+void DataStoreFile::add(timestamp_type ts, const dataStoreItem& value)
 {
   if (nItem >= DATALOGGERBUFFERSIZE) compact();
   items[nItem].value = value;
@@ -8,38 +8,37 @@ void DataStoreMemory::add(timestamp_type ts, const dataStoreItem& value)
   nItem++;
 }
 
-timestamp_type DataStoreMemory::latest() {
+timestamp_type DataStoreFile::latest() {
   if (nItem <= 0) return 0;
   return items[nItem-1].timestamp;
-
 }
 
-void DataStoreMemory::compact()
+void DataStoreFile::compact()
 {
   int toRemove = nItem - DATALOGGERBUFFERMINSIZE;
   if (toRemove <= 0) return;
-  memmove(items, items+toRemove, DATALOGGERBUFFERMINSIZE*sizeof(DataStoreMemoryRecord));
-  IotsaSerial.printf("DataStoreMemory: compact %d items\n", toRemove);
+  memmove(items, items+toRemove, DATALOGGERBUFFERMINSIZE*sizeof(DataStoreFileRecord));
+  IotsaSerial.printf("DataStoreFile: compact %d items\n", toRemove);
   nItem -= toRemove;
 }
 
-bool DataStoreMemory::should_compact() {
+bool DataStoreFile::should_compact() {
     return nItem > DATALOGGERBUFFERSIZE;
 }
 
-void DataStoreMemory::forget(timestamp_type ts) {
+void DataStoreFile::forget(timestamp_type ts) {
     int earliest = 0;
     for(int i=0; i<nItem; i++) {
         if (items[i].timestamp <= ts) earliest = i;
     }
     if (earliest > 0) {
-        memmove(items, items+earliest, (nItem-earliest)*sizeof(DataStoreMemoryRecord));
-        IotsaSerial.printf("DataStoreMemory: forget %d items\n", earliest);
+        memmove(items, items+earliest, (nItem-earliest)*sizeof(DataStoreFileRecord));
+        IotsaSerial.printf("DataStoreFile: forget %d items\n", earliest);
         nItem -= earliest;
     }
 }
 
-void DataStoreMemory::toJSON(JsonObject &replyObj)
+void DataStoreFile::toJSON(JsonObject &replyObj)
 {
   replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
   JsonArray values = replyObj.createNestedArray("data");
@@ -52,7 +51,7 @@ void DataStoreMemory::toJSON(JsonObject &replyObj)
   }
 }
 
-void DataStoreMemory::toHTML(String& reply)
+void DataStoreFile::toHTML(String& reply)
 {
   reply += "<p>Current time: ";
   auto ts = FORMAT_TIMESTAMP(GET_TIMESTAMP());

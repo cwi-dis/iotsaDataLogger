@@ -130,6 +130,7 @@ void IotsaDataLoggerMod::configSave() {
 
 void IotsaDataLoggerMod::loop() {
   timestamp_type now = GET_TIMESTAMP();
+  timestamp_type lastReading = store->latest();
   if (
       now >= lastReading + interval // Normal: interval has passed
       || now < lastReading - interval // Abnormal: clock has gone back in time.

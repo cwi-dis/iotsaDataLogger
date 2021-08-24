@@ -1,5 +1,5 @@
-#ifndef _DATASTOREMEMORY_H_
-#define _DATASTOREMEMORY_H_
+#ifndef _DATASTOREFILE_H_
+#define _DATASTOREFILE_H_
 
 #include "dataStore.h"
 
@@ -10,16 +10,16 @@
 typedef struct {
   dataStoreItem value;
   timestamp_type timestamp;
-} DataStoreMemoryRecord;
+} DataStoreFileRecord;
 
 
-class DataStoreMemory : public DataStore
+class DataStoreFile : public DataStore
 {
 public:
-  DataStoreMemory()
+  DataStoreFile()
   : nItem(0)
   {}
-  ~DataStoreMemory() {}
+  ~DataStoreFile() {}
   void add(timestamp_type ts, const dataStoreItem& value) override;
   timestamp_type latest() override;
   void compact() override;
@@ -29,7 +29,7 @@ public:
   void toHTML(String& reply) override;
 private:
   int nItem;
-  DataStoreMemoryRecord items[DATALOGGERBUFFERSIZE];
+  DataStoreFileRecord items[DATALOGGERBUFFERSIZE];
 };
 
 #endif

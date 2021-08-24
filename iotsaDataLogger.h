@@ -4,7 +4,7 @@
 #include "iotsaApi.h"
 #include "dataStore.h"
 
-#define WITH_MEMORY_STORE
+#undef WITH_MEMORY_STORE
 
 #ifdef WITH_MEMORY_STORE
 #include "dataStoreMemory.h"
@@ -23,7 +23,7 @@ class IotsaDataLoggerMod : public IotsaApiMod {
 public:
   IotsaDataLoggerMod(IotsaApplication &_app)
   : IotsaApiMod(_app),
-    store(new DataStoreMemory())
+    store(new DataStoreImplementation())
   {}
   void setup() override;
   void serverSetup() override;
@@ -37,7 +37,6 @@ protected:
   bool getHandler(const char *path, JsonObject& reply) override;
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
   int interval;
-  uint32_t lastReading;
   float adcMultiply;
   float adcOffset;
   DataStore *store;
