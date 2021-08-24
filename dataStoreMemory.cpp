@@ -2,7 +2,7 @@
 
 void DataStoreMemory::add(timestamp_type ts, const dataStoreItem& value)
 {
-  if (nItem >= DATALOGGERBUFFERSIZE) compact();
+  if (nItem >= DATALOGGERBUFFERSIZE) archive();
   items[nItem].value = value;
   items[nItem].timestamp = ts;
   nItem++;
@@ -14,7 +14,7 @@ timestamp_type DataStoreMemory::latest() {
 
 }
 
-void DataStoreMemory::compact()
+void DataStoreMemory::archive()
 {
   int toRemove = nItem - DATALOGGERBUFFERMINSIZE;
   if (toRemove <= 0) return;
@@ -23,7 +23,7 @@ void DataStoreMemory::compact()
   nItem -= toRemove;
 }
 
-bool DataStoreMemory::should_compact() {
+bool DataStoreMemory::should_archive() {
     return nItem > DATALOGGERBUFFERSIZE;
 }
 
@@ -39,10 +39,11 @@ void DataStoreMemory::forget(timestamp_type ts) {
     }
 }
 
-void DataStoreMemory::toJSON(JsonObject &replyObj)
+void DataStoreMemory::toJSON(JsonObject &replyObj, bool archived)
 {
   replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
   JsonArray values = replyObj.createNestedArray("data");
+  if (archived) return;
 
   for (int i=0; i<nItem; i++) {
     JsonObject curValue = values.createNestedObject();
@@ -52,11 +53,16 @@ void DataStoreMemory::toJSON(JsonObject &replyObj)
   }
 }
 
-void DataStoreMemory::toHTML(String& reply)
+void DataStoreMemory::toHTML(String& reply, bool archived)
 {
   reply += "<p>Current time: ";
   auto ts = FORMAT_TIMESTAMP(GET_TIMESTAMP());
   reply += ts.c_str();
+  if (archived) {
+    reply += ", no archived data.</p>";
+    return;
+  }
+  reply += ", " + String(size()) + " entries.";
   reply += "</p>";
 
   reply += "<table><tr><th>Time</th><th>Timestamp</th><th>Value</th></tr>";

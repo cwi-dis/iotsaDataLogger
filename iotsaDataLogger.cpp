@@ -4,6 +4,7 @@
 #ifdef IOTSA_WITH_WEB
 void
 IotsaDataLoggerMod::handler() {
+  bool archived = false;
   bool anyChanged = false;
   if( server->hasArg("interval")) {
     if (needsAuthentication()) return;
@@ -31,10 +32,23 @@ IotsaDataLoggerMod::handler() {
       store->forget(ts);
     }
   }
+  if (server->hasArg("doArchive")) {
+    if (needsAuthentication()) return;
+    String sv = server->arg("doArchive");
+    if (sv != "") {
+      store->archive();
+    }
+  }
+  if (server->hasArg("archived")) {
+    String sv = server->arg("archived");
+    if (sv != "") {
+      archived = true;
+    }
+  }
   if (anyChanged) configSave();
 
   String message = "<html><head><title>Timed Data Logger Module</title></head><body><h1>Timed Data Logger Module</h1>";
-  message += "<form method='get'><input type='submit' value='Refresh'></form><br>";
+  message += "<form method='get'><input type='submit' value='Refresh'><input type='checkbox' name='archived' value='1'>Show archived data in stead of current data</form><br>";
 
   message += "<h2>Acquisition settings</h2>";
   message += "<form method='get'>Interval (seconds): <input name='interval' value='";
@@ -46,8 +60,9 @@ IotsaDataLoggerMod::handler() {
   message += "'><br><input type='submit'></form>";
 
   message += "<h2>Acquisition buffer</h2>";
-  message += "<form method='get'>Forget before (unix timestamp): <input name='forgetBefore'><br><input type='submit' value='Forget'></form><br>";
-  store->toHTML(message);
+  message += "<form method='get'>Archive before (unix timestamp): <input name='forgetBefore'><input type='submit' value='Forget'></form><br>";
+  message += "<form method='get'>Archive all data: <input type='hidden' name='doArchive' value='1'><input type='submit' value='Archive Data Store'></form><br>";
+  store->toHTML(message, archived);
   message += "</body></html>";
   server->send(200, "text/html", message);
 }

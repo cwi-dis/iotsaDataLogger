@@ -22,11 +22,12 @@ public:
   ~DataStoreMemory() {}
   void add(timestamp_type ts, const dataStoreItem& value) override;
   timestamp_type latest() override;
-  void compact() override;
-  bool should_compact() override;
+  int size() override { return nItem; }
+  void archive() override;
+  bool should_archive() override;
   void forget(timestamp_type ts) override;
-  void toJSON(JsonObject& reply) override;
-  void toHTML(String& reply) override;
+  void toJSON(JsonObject& reply, bool archived=false) override;
+  void toHTML(String& reply, bool archived=false) override;
 private:
   int nItem;
   DataStoreMemoryRecord items[DATALOGGERBUFFERSIZE];

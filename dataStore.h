@@ -27,11 +27,12 @@ public:
   virtual ~DataStore() {}
   virtual void add(timestamp_type ts, const dataStoreItem& value) = 0;
   virtual timestamp_type latest() = 0;
-  virtual void compact() = 0;
-  virtual bool should_compact() = 0;
+  virtual int size() = 0;
+  virtual void archive() = 0;
+  virtual bool should_archive() = 0;
   virtual void forget(timestamp_type ts) = 0;
-  virtual void toJSON(JsonObject& reply) = 0;
-  virtual void toHTML(String& reply) = 0;
+  virtual void toJSON(JsonObject& reply, bool archived=false) = 0;
+  virtual void toHTML(String& reply, bool archived=false) = 0;
 };
 
 #endif

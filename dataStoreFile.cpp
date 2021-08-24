@@ -1,6 +1,9 @@
 #include "dataStoreFile.h"
 
+const int COMPACT_THRESHOLD = 1000; // At that size this are difficult to fit into memory for toHTML and toJSON.
+
 const char* datastoreFilename = "/spiffs/datastore.dat";
+const char* datastoreBackup = "/spiffs/datastore.001";
 
 void DataStoreFile::add(timestamp_type ts, const dataStoreItem& value)
 {
@@ -18,6 +21,7 @@ void DataStoreFile::add(timestamp_type ts, const dataStoreItem& value)
   }
   fclose(fp);
   latestTimestamp = ts;
+  if (nItem >= 0) nItem++;
 }
 
 timestamp_type DataStoreFile::latest() {
@@ -33,6 +37,8 @@ timestamp_type DataStoreFile::latest() {
   if (sts != 0) {
     IotsaSerial.println("DataStoreFile: latest: fseek failed");
   }
+  long pos = ftell(fp);
+  nItem = (pos / sizeof(rec))+1;
   size_t sz = fread(&rec, sizeof(rec), 1, fp);
   if (sz != 1) {
     IotsaSerial.println("DataStoreFile: latest: fread failed");
@@ -41,42 +47,61 @@ timestamp_type DataStoreFile::latest() {
   return rec.timestamp;
 }
 
-void DataStoreFile::compact()
-{
-#if 0
-  int toRemove = nItem - DATALOGGERBUFFERMINSIZE;
-  if (toRemove <= 0) return;
-  memmove(items, items+toRemove, DATALOGGERBUFFERMINSIZE*sizeof(DataStoreFileRecord));
-  IotsaSerial.printf("DataStoreFile: compact %d items\n", toRemove);
-  nItem -= toRemove;
-#else
-  IotsaSerial.println("DataStoreFile: compact not yet implemented");
-#endif
+int DataStoreFile::size() {
+  if (nItem <= 0) {
+    // Getting most recent timestamp also initializes nItem
+    (void)latest();
+  }
+  return nItem;
 }
 
-bool DataStoreFile::should_compact() {
-    return false;
+void DataStoreFile::archive()
+{
+  (void)remove(datastoreBackup);
+  int sts = rename(datastoreFilename, datastoreBackup);
+  if (sts != 0) {
+    IotsaSerial.println("DataStoreFile: compact: cannot rename datastore file");
+    return;
+  }
+  latestTimestamp = 0;
+  nItem = -1;
+}
+
+bool DataStoreFile::should_archive() {
+    return size() > COMPACT_THRESHOLD;
 }
 
 void DataStoreFile::forget(timestamp_type ts) {
-#if 0
-  int earliest = 0;
-  for(int i=0; i<nItem; i++) {
-      if (items[i].timestamp <= ts) earliest = i;
+  (void)remove(datastoreBackup);
+  int sts = rename(datastoreFilename, datastoreBackup);
+  if (sts != 0) {
+    IotsaSerial.println("DataStoreFile: forget: cannot rename datastore file");
+    return;
   }
-  if (earliest > 0) {
-      memmove(items, items+earliest, (nItem-earliest)*sizeof(DataStoreFileRecord));
-      IotsaSerial.printf("DataStoreFile: forget %d items\n", earliest);
-      nItem -= earliest;
+  FILE *ifp = fopen(datastoreBackup, "rb");
+  FILE *ofp = fopen(datastoreFilename, "wb");
+  if (ifp == NULL || ofp == NULL) {
+    IotsaSerial.println("DataStoreFile: forget: cannot open files");
+    return;
   }
-#else
-  IotsaSerial.println("DataStoreFile: forget not yet implemented");
-#endif
+  while(true) {
+    DataStoreFileRecord rec;
+    size_t sz = fread(&rec, sizeof(rec), 1, ifp);
+    if (sz != 1) break;
+    if (rec.timestamp >= ts) {
+      (void)fwrite(&rec, sizeof(rec), 1, ofp);
+    }
+  }
+  IotsaSerial.println("DataStoreFile: moved datastore to backup");
+  latestTimestamp = 0;
+  nItem = -1;
+  fclose(ifp);
+  fclose(ofp);
 }
 
-void DataStoreFile::toJSON(JsonObject &replyObj)
+void DataStoreFile::toJSON(JsonObject &replyObj, bool archived)
 {
-  FILE *fp = fopen(datastoreFilename, "rb");
+  FILE *fp = fopen(archived ? datastoreBackup : datastoreFilename, "rb");
   if (fp == NULL) {
     IotsaSerial.println("DataStoreFile: toJSON: fopen failed");
     return;
@@ -96,9 +121,9 @@ void DataStoreFile::toJSON(JsonObject &replyObj)
   fclose(fp);
 }
 
-void DataStoreFile::toHTML(String& reply)
+void DataStoreFile::toHTML(String& reply, bool archived)
 {
-  FILE *fp = fopen(datastoreFilename, "rb");
+  FILE *fp = fopen(archived ? datastoreBackup : datastoreFilename, "rb");
   if (fp == NULL) {
     IotsaSerial.println("DataStoreFile: toHTML: fopen failed");
     return;
@@ -106,6 +131,10 @@ void DataStoreFile::toHTML(String& reply)
   reply += "<p>Current time: ";
   auto ts = FORMAT_TIMESTAMP(GET_TIMESTAMP());
   reply += ts.c_str();
+  reply += ", " + String(size()) + " entries.";
+  if (should_archive()) {
+    reply += "<br>You should compact the datastore.";
+  }
   reply += "</p>";
 
   reply += "<table><tr><th>Time</th><th>Timestamp</th><th>Value</th></tr>";
