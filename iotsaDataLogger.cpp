@@ -24,6 +24,12 @@ IotsaDataLoggerMod::handler() {
     adcOffset = sv.toFloat();
     anyChanged = true;
   }
+  if( server->hasArg("deepSleep")) {
+    if (needsAuthentication()) return;
+    String sv = server->arg("deepSleep");
+    deepSleep = (bool)sv.toInt();
+    anyChanged = true;
+  }
   if (server->hasArg("forgetBefore")) {
     if (needsAuthentication()) return;
     String sv = server->arg("forgetBefore");
@@ -57,7 +63,10 @@ IotsaDataLoggerMod::handler() {
   message += String(adcMultiply, 3);
   message += "'><br>ADC offset: <input name='adcOffset' value='";
   message += String(adcOffset, 3);
-  message += "'><br><input type='submit'></form>";
+  message +="'><br><input type='checkbox' name='deepSleep' value='1'";
+  if (deepSleep) message += " checked";
+  message += ">Deep Sleep between acquisitions (unless WiFi is available)";
+  message += "<br><input type='submit'></form>";
 
   message += "<h2>Acquisition buffer</h2>";
   message += "<form method='get'>Archive before (unix timestamp): <input name='forgetBefore'><input type='submit' value='Forget'></form><br>";
@@ -78,6 +87,7 @@ bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
   reply["interval"] = interval;
   reply["adcMultiply"] = adcMultiply;
   reply["adcOffset"] = adcOffset;
+  reply["deepSleep"] = deepSleep;
   return true;
 }
 
@@ -96,6 +106,10 @@ bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request
   }
   if (reqObj.containsKey("adcOffset")) {
     adcOffset = reqObj["adcOffset"];
+    anyChanged = true;
+  }
+  if (reqObj.containsKey("deepSleep")) {
+    deepSleep = reqObj["deepSleep"];
     anyChanged = true;
   }
   if (reqObj.containsKey("forgetBefore")) {
@@ -133,7 +147,7 @@ void IotsaDataLoggerMod::configLoad() {
   cf.get("interval", interval, 10);
   cf.get("adcMultiply", adcMultiply, 1);
   cf.get("adcOffset", adcOffset, 0);
- 
+  cf.get("deepSleep", deepSleep, false);
 }
 
 void IotsaDataLoggerMod::configSave() {
@@ -141,9 +155,12 @@ void IotsaDataLoggerMod::configSave() {
   cf.put("interval", interval);
   cf.put("adcMultiply", adcMultiply);
   cf.put("adcOffset", adcOffset);
+  cf.put("deepSleep", deepSleep);
 }
 
 void IotsaDataLoggerMod::loop() {
+  // Must be up for some time, to allow WiFi and other things to stabilise
+  if (millis() < minimumUptimeMillis) return;
   timestamp_type now = GET_TIMESTAMP();
   timestamp_type lastReading = store->latest();
   if (
@@ -160,5 +177,20 @@ void IotsaDataLoggerMod::loop() {
     value /= nSample;
     IotsaSerial.printf("xxxjack value=%f\n", value);
     store->add(now, value);
+    //
+    // Should we go to sleep?
+    //
+    if (deepSleep) {
+      const char *bootReason = iotsaConfig.getBootReason();
+      bool hasWifi = iotsaConfig.networkIsUp();
+      int pin0 = digitalRead(0);
+      IotsaSerial.printf("xxxjack bootReason=%s hasWifi=%d pin0=%d deepSleep=%d\n", bootReason, hasWifi, pin0, deepSleep);
+      if (!hasWifi && iotsaConfig.canSleep() && pin0) {
+        IotsaSerial.println("Deep sleep.");
+        delay(10);
+        esp_sleep_enable_timer_wakeup(interval*1000000LL);
+        esp_deep_sleep_start();
+      }
+    }
   }
 }
