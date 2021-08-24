@@ -28,7 +28,7 @@ IotsaDataLoggerMod::handler() {
     String sv = server->arg("forgetBefore");
     if (sv != "") {
       timestamp_type ts = sv.toInt();
-      buffer.forget(ts);
+      store->forget(ts);
     }
   }
   if (anyChanged) configSave();
@@ -47,7 +47,7 @@ IotsaDataLoggerMod::handler() {
 
   message += "<h2>Acquisition buffer</h2>";
   message += "<form method='get'>Forget before (unix timestamp): <input name='forgetBefore'><br><input type='submit' value='Forget'></form><br>";
-  buffer.toHTML(message);
+  store->toHTML(message);
   message += "</body></html>";
   server->send(200, "text/html", message);
 }
@@ -59,7 +59,7 @@ String IotsaDataLoggerMod::info() {
 #endif // IOTSA_WITH_WEB
 
 bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
-  buffer.toJSON(reply);
+  store->toJSON(reply);
   reply["interval"] = interval;
   reply["adcMultiply"] = adcMultiply;
   reply["adcOffset"] = adcOffset;
@@ -85,7 +85,7 @@ bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request
   }
   if (reqObj.containsKey("forgetBefore")) {
     timestamp_type ts = reqObj["forgetBefore"].as<timestamp_type>();
-    buffer.forget(ts);
+    store->forget(ts);
     anySet = true;
   }
   if (anyChanged) {
@@ -139,6 +139,6 @@ void IotsaDataLoggerMod::loop() {
     int iValue = analogRead(PIN_ANALOG_IN);
     float value = iValue * adcMultiply + adcOffset;
     IotsaSerial.printf("xxxjack value=%f\n", value);
-    buffer.add(now, value);
+    store->add(now, value);
   }
 }

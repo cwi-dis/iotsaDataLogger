@@ -3,7 +3,16 @@
 #include "iotsa.h"
 #include "iotsaApi.h"
 #include "dataStore.h"
+
+#define WITH_MEMORY_STORE
+
+#ifdef WITH_MEMORY_STORE
 #include "dataStoreMemory.h"
+typedef DataStoreMemory DataStoreImplementation;
+#else
+#include "dataStoreFile.h"
+typedef DataStoreFile DataStoreImplementation;
+#endif
 
 //
 // Input pin
@@ -12,7 +21,10 @@
 
 class IotsaDataLoggerMod : public IotsaApiMod {
 public:
-  IotsaDataLoggerMod(IotsaApplication &_app) : IotsaApiMod(_app) {}
+  IotsaDataLoggerMod(IotsaApplication &_app)
+  : IotsaApiMod(_app),
+    store(new DataStoreMemory())
+  {}
   void setup() override;
   void serverSetup() override;
   void loop() override;
@@ -28,7 +40,7 @@ protected:
   uint32_t lastReading;
   float adcMultiply;
   float adcOffset;
-  DataStoreMemory buffer;
+  DataStore *store;
 };
 
 #endif
