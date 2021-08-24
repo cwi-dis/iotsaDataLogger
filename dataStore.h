@@ -11,6 +11,7 @@
 //
 typedef time_t timestamp_type;
 #define GET_TIMESTAMP() (time(nullptr))
+
 inline std::string FORMAT_TIMESTAMP(timestamp_type ts) {
   struct tm *tm = localtime(&ts);
   char buf[25];

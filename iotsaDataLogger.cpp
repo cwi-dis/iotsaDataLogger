@@ -23,9 +23,20 @@ IotsaDataLoggerMod::handler() {
     adcOffset = sv.toFloat();
     anyChanged = true;
   }
+  if (server->hasArg("forgetBefore")) {
+    if (needsAuthentication()) return;
+    String sv = server->arg("forgetBefore");
+    if (sv != "") {
+      timestamp_type ts = sv.toInt();
+      buffer.forget(ts);
+    }
+  }
   if (anyChanged) configSave();
 
   String message = "<html><head><title>Timed Data Logger Module</title></head><body><h1>Timed Data Logger Module</h1>";
+  message += "<form method='get'><input type='submit' value='Refresh'></form><br>";
+
+  message += "<h2>Acquisition settings</h2>";
   message += "<form method='get'>Interval (seconds): <input name='interval' value='";
   message += String(interval);
   message += "'><br>ADC multiplication factor: <input name='adcMultiply' value='";
@@ -33,6 +44,9 @@ IotsaDataLoggerMod::handler() {
   message += "'><br>ADC offset: <input name='adcOffset' value='";
   message += String(adcOffset, 3);
   message += "'><br><input type='submit'></form>";
+
+  message += "<h2>Acquisition buffer</h2>";
+  message += "<form method='get'>Forget before (unix timestamp): <input name='forgetBefore'><br><input type='submit' value='Forget'></form><br>";
   buffer.toHTML(message);
   message += "</body></html>";
   server->send(200, "text/html", message);
@@ -56,6 +70,7 @@ bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request
   if (!request.is<JsonObject>()) return false;
   JsonObject reqObj = request.as<JsonObject>();
   bool anyChanged = false;
+  bool anySet = false;
   if (reqObj.containsKey("interval")) {
     interval = reqObj["interval"];
     anyChanged = true;
@@ -68,10 +83,15 @@ bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request
     adcOffset = reqObj["adcOffset"];
     anyChanged = true;
   }
+  if (reqObj.containsKey("forgetBefore")) {
+    timestamp_type ts = reqObj["forgetBefore"].as<timestamp_type>();
+    buffer.forget(ts);
+    anySet = true;
+  }
   if (anyChanged) {
     configSave();
   }
-  return anyChanged;
+  return anyChanged||anySet;
 }
 
 void IotsaDataLoggerMod::setup() {

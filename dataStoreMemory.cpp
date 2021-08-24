@@ -13,6 +13,7 @@ void DataStoreMemory::compact()
   int toRemove = nItem - DATALOGGERBUFFERMINSIZE;
   if (toRemove <= 0) return;
   memmove(items, items+toRemove, DATALOGGERBUFFERMINSIZE*sizeof(DataStoreMemoryRecord));
+  IotsaSerial.printf("DataStoreMemory: compact %d items\n", toRemove);
   nItem -= toRemove;
 }
 
@@ -21,7 +22,15 @@ bool DataStoreMemory::should_compact() {
 }
 
 void DataStoreMemory::forget(timestamp_type ts) {
-    IotsaSerial.println("DataStoreMemory::forget not yet implemented");
+    int earliest = 0;
+    for(int i=0; i<nItem; i++) {
+        if (items[i].timestamp <= ts) earliest = i;
+    }
+    if (earliest > 0) {
+        memmove(items, items+earliest, (nItem-earliest)*sizeof(DataStoreMemoryRecord));
+        IotsaSerial.printf("DataStoreMemory: forget %d items\n", earliest);
+        nItem -= earliest;
+    }
 }
 
 void DataStoreMemory::toJSON(JsonObject &replyObj)
@@ -32,22 +41,25 @@ void DataStoreMemory::toJSON(JsonObject &replyObj)
   for (int i=0; i<nItem; i++) {
     JsonObject curValue = values.createNestedObject();
     curValue["t"] = FORMAT_TIMESTAMP(items[i].timestamp);
+    curValue["ts"] = items[i].timestamp;
     curValue["v"] = items[i].value;
   }
 }
 
 void DataStoreMemory::toHTML(String& reply)
 {
-  reply += "<h2>Recent values</h2><p>Current time: ";
+  reply += "<p>Current time: ";
   auto ts = FORMAT_TIMESTAMP(GET_TIMESTAMP());
   reply += ts.c_str();
   reply += "</p>";
 
-  reply += "<table><tr><th>Time</th><th>Value</th></tr>";
+  reply += "<table><tr><th>Time</th><th>Timestamp</th><th>Value</th></tr>";
   for (int i=0; i<nItem; i++) {
     reply += "<tr><td>";
     auto ts = FORMAT_TIMESTAMP(items[i].timestamp);
     reply += ts.c_str();
+    reply += "</td><td>";
+    reply += String(items[i].timestamp);
     reply += "</td><td>";
     reply += String(items[i].value);
     reply += "</td></tr>";
