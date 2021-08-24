@@ -1,5 +1,7 @@
 import csv
 import iotsa
+import matplotlib.pyplot as pyplot
+import pandas
 
 class DataLogger:
     def __init__(self, verbose=False):
@@ -21,7 +23,7 @@ class DataLogger:
     def read_file(self, filename):
         data = []
         with open(filename, 'r') as fp:
-            csv_reader = csv.DictReader(fp)
+            csv_reader = csv.DictReader(fp, quoting=csv.QUOTE_NONNUMERIC)
             for record in csv_reader:
                 data.append(record)
         if self.verbose:
@@ -44,12 +46,16 @@ class DataLogger:
 
     def write_file(self, filename):
         with open(filename, 'w') as fp:
-            csv_writer = csv.DictWriter(fp, self.data[0].keys())
+            csv_writer = csv.DictWriter(fp, self.data[0].keys(), quoting=csv.QUOTE_NONNUMERIC)
             csv_writer.writeheader()
             csv_writer.writerows(self.data)
         if self.verbose:
             print(f'write_file: wrote {len(self.data)} records to {filename}')
 
     def graph(self):
-        pass
-
+        pd = pandas.DataFrame(self.data)
+        pd.v = pandas.to_numeric(pd.v)
+        pd.ts = pandas.to_numeric(pd.ts)
+        pd.t = pandas.to_datetime(pd.t)
+        pd.plot(x='t', y='v')
+        pyplot.show()
