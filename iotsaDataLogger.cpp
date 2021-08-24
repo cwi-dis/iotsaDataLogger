@@ -152,8 +152,12 @@ void IotsaDataLoggerMod::loop() {
     ) {
     lastReading = now;
     // xxxx save lastReading in NVM
-    int iValue = analogRead(PIN_ANALOG_IN);
-    float value = iValue * adcMultiply + adcOffset;
+    float value = 0;
+    for(int i=0; i<nSample; i++) {
+      int iValue = analogRead(PIN_ANALOG_IN);
+      value += iValue * adcMultiply + adcOffset;
+    }
+    value /= nSample;
     IotsaSerial.printf("xxxjack value=%f\n", value);
     store->add(now, value);
   }

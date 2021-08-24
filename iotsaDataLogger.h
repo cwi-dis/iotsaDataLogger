@@ -39,6 +39,7 @@ protected:
   int interval;
   float adcMultiply;
   float adcOffset;
+  const int nSample = 5;
   DataStore *store;
 };
 
