@@ -40,7 +40,7 @@ protected:
   float adcMultiply;
   float adcOffset;
   const int nSample = 5;
-  const int minimumUptimeMillis = 5000;
+  const int minimumUptimeMillis = 15000;
   bool deepSleep = false;
   DataStore *store;
 };
