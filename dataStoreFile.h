@@ -3,10 +3,6 @@
 
 #include "dataStore.h"
 
-#define DATALOGGERBUFFERSIZE 1024
-#define DATALOGGERBUFFERMINSIZE 512
-
-
 typedef struct {
   dataStoreItem value;
   timestamp_type timestamp;
@@ -17,7 +13,7 @@ class DataStoreFile : public DataStore
 {
 public:
   DataStoreFile()
-  : nItem(0)
+  : latestTimestamp(0)
   {}
   ~DataStoreFile() {}
   void add(timestamp_type ts, const dataStoreItem& value) override;
@@ -28,8 +24,7 @@ public:
   void toJSON(JsonObject& reply) override;
   void toHTML(String& reply) override;
 private:
-  int nItem;
-  DataStoreFileRecord items[DATALOGGERBUFFERSIZE];
+  timestamp_type latestTimestamp;
 };
 
 #endif
