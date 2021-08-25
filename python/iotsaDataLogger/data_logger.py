@@ -11,7 +11,7 @@ class DataLogger:
 
     def read_device(self, device, archive, kwargs):
         self.device = iotsa.IotsaDevice(device, **kwargs)
-        api = self.device.getApi('datalogger' if not archive else 'datalogger?archive=1')
+        api = self.device.getApi('datalogger?jsonBufSize=20000' if not archive else 'datalogger?jsonBufSize=20000&archive=1')
         api_data = api.getAll()
         data = api_data['data']
         if self.verbose:
