@@ -9,9 +9,21 @@ class DataLogger:
         self.verbose = verbose
         self.device = None
 
-    def read_device(self, device, archive, kwargs):
+    def read_device(self, device, archive, jsonBufSize=None, kwargs={}):
         self.device = iotsa.IotsaDevice(device, **kwargs)
-        api = self.device.getApi('datalogger?jsonBufSize=20000' if not archive else 'datalogger?jsonBufSize=20000&archive=1')
+        urlArgs = []
+        if jsonBufSize:
+            urlArgs.append(f'jsonBufSize={jsonBufSize}')
+        if archive:
+            urlArgs.append('archive=1')
+        if urlArgs:
+            urlArgs = '&'.join(urlArgs)
+            endPoint = f'datalogger?{urlArgs}'
+        else:
+            endPoint = 'datalogger'
+        if self.verbose:
+            print(f"read_device: endpoint is {endPoint}")
+        api = self.device.getApi(endPoint)
         api_data = api.getAll()
         data = api_data['data']
         if self.verbose:

@@ -6,6 +6,7 @@ from .data_logger import DataLogger
 def main():
     parser = argparse.ArgumentParser(description="Get data from iotsaDataLogger")
     parser.add_argument("-d", "--device", action="store", metavar="HOST", help="Hostname or IP to get data from")
+    parser.add_argument("-b", "--bufsize", action="store", metavar="N", help="Use JSON buffer size N to get data")
     parser.add_argument("-D", "--devarg", nargs="*", default=[], metavar="NAME=VALUE", help="iotsa arguments")
     parser.add_argument("-i", "--input", nargs="*", default=[], metavar="FILE", help="Get data from CSV file in stead of from device")
     parser.add_argument("-g", "--graph", action="store_true", help="Graph data")
@@ -21,7 +22,7 @@ def main():
         for pair in args.devarg:
             k, v = pair.split('=')
             kwargs[k] = v
-        logger.read_device(args.device, args.archive, kwargs)
+        logger.read_device(args.device, args.archive, args.bufsize, kwargs)
     for a in args.input:
         logger.read_file(a)
     if args.merge:
