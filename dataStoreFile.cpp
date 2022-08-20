@@ -2,11 +2,12 @@
 
 const int COMPACT_THRESHOLD = 1000; // At that size this are difficult to fit into memory for toHTML and toJSON.
 
-const char* datastoreFilename = "/spiffs/datastore.dat";
-const char* datastoreBackup = "/spiffs/datastore.001";
+const char* datastoreFilename = "/littlefs/datastore.dat";
+const char* datastoreBackup = "/littlefs/datastore.001";
 
 void DataStoreFile::add(timestamp_type ts, const dataStoreItem& value)
 {
+
   FILE *fp = fopen(datastoreFilename, "ab");
   if (fp == NULL) {
     IotsaSerial.println("DataStoreFile: add: fopen failed");
