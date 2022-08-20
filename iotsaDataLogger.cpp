@@ -163,9 +163,12 @@ void IotsaDataLoggerMod::loop() {
   if (millis() < minimumUptimeMillis) return;
   timestamp_type now = GET_TIMESTAMP();
   timestamp_type lastReading = store->latest();
+  timestamp_type nextReading = lastReading + interval;
+  int nextInterval = interval;
+  IotsaSerial.printf("xxxjack loop now=%ld lastReading=%ld\n", now, lastReading);
   if (
-      now >= lastReading + interval // Normal: interval has passed
-      || now < lastReading - interval // Abnormal: clock has gone back in time.
+      now >= nextReading // Normal: interval has passed
+      || now < lastReading // Abnormal: clock has gone back in time.
     ) {
     lastReading = now;
     // xxxx save lastReading in NVM
@@ -177,20 +180,25 @@ void IotsaDataLoggerMod::loop() {
     value /= nSample;
     IotsaSerial.printf("xxxjack value=%f\n", value);
     store->add(now, value);
-    //
-    // Should we go to sleep?
-    //
-    if (deepSleep) {
-      const char *bootReason = iotsaConfig.getBootReason();
-      bool hasWifi = iotsaConfig.networkIsUp();
-      int pin0 = digitalRead(0);
-      IotsaSerial.printf("xxxjack bootReason=%s hasWifi=%d pin0=%d deepSleep=%d\n", bootReason, hasWifi, pin0, deepSleep);
-      if (!hasWifi && iotsaConfig.canSleep() && pin0) {
-        IotsaSerial.println("Deep sleep.");
-        delay(10);
-        esp_sleep_enable_timer_wakeup(interval*1000000LL);
-        esp_deep_sleep_start();
-      }
+  } else {
+    // We have not slept long enough.
+    nextInterval = (int)(nextReading - now);
+    if (nextInterval < 0) nextInterval = 1;
+  }
+  //
+  // Should we go to sleep?
+  //
+  if (deepSleep) {
+    const char *bootReason = iotsaConfig.getBootReason();
+    bool hasWifi = iotsaConfig.networkIsUp();
+    bool canSleep = iotsaConfig.canSleep();
+    int pin0 = digitalRead(0);
+    IotsaSerial.printf("xxxjack bootReason=%s hasWifi=%d pin0=%d deepSleep=%d canSleep=%d nextInterval=%d\n", bootReason, hasWifi, pin0, deepSleep, canSleep, nextInterval);
+    if (!hasWifi && canSleep && pin0) {
+      IotsaSerial.println("Deep sleep.");
+      delay(10);
+      esp_sleep_enable_timer_wakeup(nextInterval*1000000LL);
+      esp_deep_sleep_start();
     }
   }
 }
