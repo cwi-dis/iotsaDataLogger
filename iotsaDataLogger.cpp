@@ -43,6 +43,8 @@ IotsaDataLoggerMod::handler() {
     String sv = server->arg("doArchive");
     if (sv != "") {
       store->archive();
+      // Hack: we call loop() to take a single reading
+      loop();
     }
   }
   if (server->hasArg("archived")) {
@@ -60,9 +62,9 @@ IotsaDataLoggerMod::handler() {
   message += "<form method='get'>Interval (seconds): <input name='interval' value='";
   message += String(interval);
   message += "'><br>ADC multiplication factor: <input name='adcMultiply' value='";
-  message += String(adcMultiply, 3);
+  message += String(adcMultiply, 5);
   message += "'><br>ADC offset: <input name='adcOffset' value='";
-  message += String(adcOffset, 3);
+  message += String(adcOffset, 5);
   message +="'><br><input type='checkbox' name='deepSleep' value='1'";
   if (deepSleep) message += " checked";
   message += ">Deep Sleep between acquisitions (unless WiFi is available)";
@@ -71,6 +73,8 @@ IotsaDataLoggerMod::handler() {
   message += "<h2>Acquisition buffer</h2>";
   message += "<form method='get'>Archive before (unix timestamp): <input name='forgetBefore'><input type='submit' value='Forget'></form><br>";
   message += "<form method='get'>Archive all data: <input type='hidden' name='doArchive' value='1'><input type='submit' value='Archive Data Store'></form><br>";
+  
+  message += "<form method='get'><input type='submit' value='Refresh'></form></br>";
   store->toHTML(message, archived);
   message += "</body></html>";
   server->send(200, "text/html", message);
