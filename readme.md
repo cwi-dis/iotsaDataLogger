@@ -1,5 +1,8 @@
 # iotsaDataLogger - web server to record time series from a sensor
 
+![build-platformio](https://github.com/cwi-dis/iotsaDataLogger/workflows/build-platformio/badge.svg)
+![build-arduino](https://github.com/cwi-dis/iotsaDataLogger/workflows/build-arduino/badge.svg)
+
 IotsaDataLogger reads an analog sensor repeatedly at a settable interval and records these readings in a buffer.
 The buffer can then be read over the web as JSON data.
 
