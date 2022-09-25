@@ -1,0 +1,3 @@
+iotsa
+matplotlib
+pandas
