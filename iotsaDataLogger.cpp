@@ -75,7 +75,7 @@ IotsaDataLoggerMod::handler() {
   message += "<form method='get'>Archive all data: <input type='hidden' name='doArchive' value='1'><input type='submit' value='Archive Data Store'></form><br>";
   
   message += "<form method='get'><input type='submit' value='Refresh'></form></br>";
-  store->toHTML(message, archived);
+  store->toHTML(message, archived, true);
   message += "</body></html>";
   server->send(200, "text/html", message);
 }
@@ -95,6 +95,16 @@ bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
   reply["adcOffset"] = adcOffset;
   reply["deepSleep"] = deepSleep;
   return true;
+}
+
+void
+IotsaDataLoggerMod::dataHandler() {
+  store->toCSV(server, false);
+}
+
+void
+IotsaDataLoggerMod::archiveHandler() {
+  store->toCSV(server, true);
 }
 
 bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
@@ -143,6 +153,8 @@ void IotsaDataLoggerMod::setup() {
 void IotsaDataLoggerMod::serverSetup() {
 #ifdef IOTSA_WITH_WEB
   server->on("/datalogger", std::bind(&IotsaDataLoggerMod::handler, this));
+  server->on("/datalogger/data.csv", std::bind(&IotsaDataLoggerMod::dataHandler, this));
+  server->on("/datalogger/archive.csv", std::bind(&IotsaDataLoggerMod::archiveHandler, this));
 #endif
   api.setup("/api/datalogger", true, true);
   name = "datalogger";
