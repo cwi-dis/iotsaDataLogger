@@ -87,7 +87,9 @@ String IotsaDataLoggerMod::info() {
 #endif // IOTSA_WITH_WEB
 
 bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
-  store->toJSON(reply);
+  store->toJSON(reply, false, true);
+  JsonObject archive = reply.createNestedObject("archive");
+  store->toJSON(archive, true, true);
   reply["interval"] = interval;
   reply["adcMultiply"] = adcMultiply;
   reply["adcOffset"] = adcOffset;

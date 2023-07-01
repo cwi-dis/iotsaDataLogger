@@ -31,7 +31,7 @@ public:
   virtual void archive() = 0;
   virtual bool should_archive() = 0;
   virtual void forget(timestamp_type ts) = 0;
-  virtual void toJSON(JsonObject& reply, bool archived=false) = 0;
+  virtual void toJSON(JsonObject& reply, bool archived, bool summary) = 0;
   virtual void toHTML(String& reply, bool archived=false) = 0;
 };
 

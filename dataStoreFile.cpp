@@ -100,26 +100,54 @@ void DataStoreFile::forget(timestamp_type ts) {
   fclose(ofp);
 }
 
-void DataStoreFile::toJSON(JsonObject &replyObj, bool archived)
+void DataStoreFile::toJSON(JsonObject &replyObj, bool archived, bool summary)
 {
   FILE *fp = fopen(archived ? datastoreBackup : datastoreFilename, "rb");
   if (fp == NULL) {
     IotsaSerial.println("DataStoreFile: toJSON: fopen failed");
     return;
   }
-  replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
+  if (!archived) {
+    replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
+  }
   JsonArray values = replyObj.createNestedArray("data");
 
+  if (summary) {
+    int count = 0;
+    // Only output first and last record
+    DataStoreFileRecord rec;
+    size_t sz = fread(&rec, sizeof(rec), 1, fp);
+    if (sz != 1) {
+      replyObj["count"] = 0;
+      return;
+    }
+    count++;
+    JsonObject curValue = values.createNestedObject();
+    _storeRec(rec, curValue);
+    while(fread(&rec, sizeof(rec), 1, fp) == 1) {
+      // Do nothing
+      count++;
+    }
+    // Now rec has the last record.
+    curValue = values.createNestedObject();
+    _storeRec(rec, curValue);
+    replyObj["count"] = count;
+    return;
+  }
   while(true) {
     DataStoreFileRecord rec;
     size_t sz = fread(&rec, sizeof(rec), 1, fp);
     if (sz != 1) break;
     JsonObject curValue = values.createNestedObject();
-    curValue["t"] = FORMAT_TIMESTAMP(rec.timestamp);
-    curValue["ts"] = rec.timestamp;
-    curValue["v"] = rec.value;
+    _storeRec(rec, curValue);
   }
   fclose(fp);
+}
+
+void DataStoreFile::_storeRec(DataStoreFileRecord rec, JsonObject obj) {
+    obj["t"] = FORMAT_TIMESTAMP(rec.timestamp);
+    obj["ts"] = rec.timestamp;
+    obj["v"] = rec.value;
 }
 
 void DataStoreFile::toHTML(String& reply, bool archived)
