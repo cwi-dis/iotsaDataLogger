@@ -100,29 +100,57 @@ void DataStoreFile::forget(timestamp_type ts) {
   fclose(ofp);
 }
 
-void DataStoreFile::toJSON(JsonObject &replyObj, bool archived)
+void DataStoreFile::toJSON(JsonObject &replyObj, bool archived, bool summary)
 {
   FILE *fp = fopen(archived ? datastoreBackup : datastoreFilename, "rb");
   if (fp == NULL) {
     IotsaSerial.println("DataStoreFile: toJSON: fopen failed");
     return;
   }
-  replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
+  if (!archived) {
+    replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
+  }
   JsonArray values = replyObj.createNestedArray("data");
 
+  if (summary) {
+    int count = 0;
+    // Only output first and last record
+    DataStoreFileRecord rec;
+    size_t sz = fread(&rec, sizeof(rec), 1, fp);
+    if (sz != 1) {
+      replyObj["count"] = 0;
+      return;
+    }
+    count++;
+    JsonObject curValue = values.createNestedObject();
+    _storeRec(rec, curValue);
+    while(fread(&rec, sizeof(rec), 1, fp) == 1) {
+      // Do nothing
+      count++;
+    }
+    // Now rec has the last record.
+    curValue = values.createNestedObject();
+    _storeRec(rec, curValue);
+    replyObj["count"] = count;
+    return;
+  }
   while(true) {
     DataStoreFileRecord rec;
     size_t sz = fread(&rec, sizeof(rec), 1, fp);
     if (sz != 1) break;
     JsonObject curValue = values.createNestedObject();
-    curValue["t"] = FORMAT_TIMESTAMP(rec.timestamp);
-    curValue["ts"] = rec.timestamp;
-    curValue["v"] = rec.value;
+    _storeRec(rec, curValue);
   }
   fclose(fp);
 }
 
-void DataStoreFile::toHTML(String& reply, bool archived)
+void DataStoreFile::_storeRec(DataStoreFileRecord rec, JsonObject obj) {
+    obj["t"] = FORMAT_TIMESTAMP(rec.timestamp);
+    obj["ts"] = rec.timestamp;
+    obj["v"] = rec.value;
+}
+
+void DataStoreFile::toHTML(String& reply, bool archived, bool summary)
 {
   FILE *fp = fopen(archived ? datastoreBackup : datastoreFilename, "rb");
   if (fp == NULL) {
@@ -136,22 +164,85 @@ void DataStoreFile::toHTML(String& reply, bool archived)
   if (should_archive()) {
     reply += "<br>You should compact the datastore.";
   }
+  reply += "<br>Full data available at ";
+  if (archived) {
+    reply += "<a href='/datalogger/archive.csv'>/datalogger/archive.csv</a>.";
+  } else {
+    reply += "<a href='/datalogger/data.csv'>/datalogger/data.csv</a>.";
+  }
   reply += "</p>";
 
   reply += "<table><tr><th>Time</th><th>Timestamp</th><th>Value</th></tr>";
+  if (summary) {
+    DataStoreFileRecord rec;
+    size_t sz = fread(&rec, sizeof(rec), 1, fp);
+    if (sz == 1) {
+      reply += "<tr><td>";
+      std::string ts = FORMAT_TIMESTAMP(rec.timestamp);
+      reply += ts.c_str();
+      reply += "</td><td>";
+      reply += String(rec.timestamp);
+      reply += "</td><td>";
+      reply += String(rec.value);
+      reply += "</td></tr>";
+
+      while (fread(&rec, sizeof(rec), 1, fp) == 1) { }
+
+      reply += "<tr><td>";
+      ts = FORMAT_TIMESTAMP(rec.timestamp);
+      reply += ts.c_str();
+      reply += "</td><td>";
+      reply += String(rec.timestamp);
+      reply += "</td><td>";
+      reply += String(rec.value);
+      reply += "</td></tr>";
+    }
+  } else {
+    while(true) {
+      DataStoreFileRecord rec;
+      size_t sz = fread(&rec, sizeof(rec), 1, fp);
+      if (sz != 1) break;
+      reply += "<tr><td>";
+      auto ts = FORMAT_TIMESTAMP(rec.timestamp);
+      reply += ts.c_str();
+      reply += "</td><td>";
+      reply += String(rec.timestamp);
+      reply += "</td><td>";
+      reply += String(rec.value);
+      reply += "</td></tr>";
+    }
+  }
+  fclose(fp);
+  reply += "</table>";
+}
+
+void DataStoreFile::toCSV(IotsaWebServer *server, bool archived) {
+  server->setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server->send(200, "text/csv", "");
+  server->sendContent("t,ts,v\r\n");
+  FILE *fp = fopen(archived ? datastoreBackup : datastoreFilename, "rb");
+  if (fp == NULL) {
+    IotsaSerial.println("DataStoreFile: toCSV: fopen failed");
+    return;
+  }
+
   while(true) {
     DataStoreFileRecord rec;
     size_t sz = fread(&rec, sizeof(rec), 1, fp);
     if (sz != 1) break;
-    reply += "<tr><td>";
-    auto ts = FORMAT_TIMESTAMP(rec.timestamp);
-    reply += ts.c_str();
-    reply += "</td><td>";
-    reply += String(rec.timestamp);
-    reply += "</td><td>";
-    reply += String(rec.value);
-    reply += "</td></tr>";
+    _sendCSV(rec, server);
   }
   fclose(fp);
-  reply += "</table>";
+}
+
+void DataStoreFile::_sendCSV(DataStoreFileRecord rec, IotsaWebServer* server) {
+  char buf[100];
+  std::string tstring = FORMAT_TIMESTAMP(rec.timestamp);
+  snprintf(buf, sizeof(buf), "\"%s\",%ld,%f\r\n",
+    tstring.c_str(),
+    (long)rec.timestamp,
+    (float)rec.value
+  );
+  String sBuf(buf);
+  server->sendContent(sBuf);
 }

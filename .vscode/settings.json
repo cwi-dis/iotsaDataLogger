@@ -6,5 +6,6 @@
     "files.associations": {
         "functional": "cpp",
         "random": "cpp"
-    }
+    },
+    "cmake.configureOnOpen": false
 }

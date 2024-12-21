@@ -39,12 +39,27 @@ void DataStoreMemory::forget(timestamp_type ts) {
     }
 }
 
-void DataStoreMemory::toJSON(JsonObject &replyObj, bool archived)
+void DataStoreMemory::toJSON(JsonObject &replyObj, bool archived, bool summary)
 {
-  replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
+  if (!archived) {
+    replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
+  }
   JsonArray values = replyObj.createNestedArray("data");
   if (archived) return;
 
+  if (summary) {
+    replyObj["count"] = nItem;
+    if (nItem == 0) return;
+    JsonObject curValue = values.createNestedObject();
+    curValue["t"] = FORMAT_TIMESTAMP(items[0].timestamp);
+    curValue["ts"] = items[0].timestamp;
+    curValue["v"] = items[0].value;
+    curValue = values.createNestedObject();
+    curValue["t"] = FORMAT_TIMESTAMP(items[nItem-1].timestamp);
+    curValue["ts"] = items[nItem-1].timestamp;
+    curValue["v"] = items[nItem-1].value;
+    return;
+  }
   for (int i=0; i<nItem; i++) {
     JsonObject curValue = values.createNestedObject();
     curValue["t"] = FORMAT_TIMESTAMP(items[i].timestamp);
@@ -53,7 +68,25 @@ void DataStoreMemory::toJSON(JsonObject &replyObj, bool archived)
   }
 }
 
-void DataStoreMemory::toHTML(String& reply, bool archived)
+void DataStoreMemory::toCSV(IotsaWebServer *server, bool archived) {
+  server->send(200, "text/csv", "");
+  server->sendContent("t,ts,v\r\n");
+  if (archived) return;
+  for(int i=0; i<nItem; i++) {
+    char buf[100];
+    std::string tstring = FORMAT_TIMESTAMP(items[i].timestamp);
+    snprintf(buf, sizeof(buf), "\"%s\",%ld,%f\r\n",
+      tstring.c_str(),
+      (long)items[i].timestamp,
+      (float)items[i].value
+    );
+    String sBuf(buf);
+    server->sendContent(sBuf);
+  }
+  server->sendContent("\"2023-06-26T08:30:18\",0,12.42\r\n");
+}
+
+void DataStoreMemory::toHTML(String& reply, bool archived, bool summary)
 {
   reply += "<p>Current time: ";
   auto ts = FORMAT_TIMESTAMP(GET_TIMESTAMP());
@@ -66,7 +99,11 @@ void DataStoreMemory::toHTML(String& reply, bool archived)
   reply += "</p>";
 
   reply += "<table><tr><th>Time</th><th>Timestamp</th><th>Value</th></tr>";
-  for (int i=0; i<nItem; i++) {
+  int step = 1;
+  if (summary) {
+    step = nItem-1;
+  }
+  for (int i=0; i<nItem; i+=step) {
     reply += "<tr><td>";
     auto ts = FORMAT_TIMESTAMP(items[i].timestamp);
     reply += ts.c_str();

@@ -23,9 +23,13 @@ public:
   void archive() override;
   bool should_archive() override;
   void forget(timestamp_type ts) override;
-  void toJSON(JsonObject& reply, bool archived=false) override;
-  void toHTML(String& reply, bool archived=false) override;
+  void toJSON(JsonObject& reply, bool archived, bool summary) override;
+  void toHTML(String& reply, bool archived, bool summary) override;
+  void toCSV(IotsaWebServer *server, bool archived) override;
+
 private:
+  void _storeRec(DataStoreFileRecord rec, JsonObject obj);
+  void _sendCSV(DataStoreFileRecord rec, IotsaWebServer* server);
   timestamp_type latestTimestamp;
   int nItem;
 };
