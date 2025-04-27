@@ -24,6 +24,9 @@ jobs:
       matrix:
         arduino-board-fqbn:
         - esp32:esp32:esp32thing
+        partition_scheme: 
+        - --board-options PartitionScheme=min_spiffs
+        
 #        - esp32:esp32:pico32
       
     steps:
@@ -75,7 +78,7 @@ jobs:
         arduino-cli lib install --git-url https://github.com/cwi-dis/iotsa#${{ env.iotsa_ref }}
         arduino-cli lib list
 
-    - name: Arduino build
-      uses: ArminJo/arduino-test-compile@v3
-      with:
-        arduino-board-fqbn: ${{ matrix.arduino-board-fqbn }}
+    - name: Build for ${{ matrix.arduino-board-fqbn }}
+      run: |
+        arduino-cli compile --fqbn ${{ matrix.arduino-board-fqbn }} ${{ matrix.partition_scheme }}
+  
