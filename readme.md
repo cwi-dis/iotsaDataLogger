@@ -43,7 +43,22 @@ Home page is <https://github.com/cwi-dis/iotsaSensor>.
 ## Operation
 
 
-To read the values use the web interface, or the Python package in `extras/python/iotsaDataLogger`. It can read the recorded values to a CSV file, optionally merging, and graph the results.
+To read the values use the web interface, or the Python package in `extras/python`. Set it up once:
+
+```sh
+python3 -m venv venv
+source venv/bin/activate
+pip install extras/python
+```
+
+Then activate the venv and use the tool:
+
+```sh
+source venv/bin/activate
+iotsaDataLogger --device <hostname> --output readings.csv --graph
+```
+
+It can read the recorded values to a CSV file, optionally merging, and graph the results.
 
 There is an issue with the REST API with large datasets. You can supply the `--bufsize` parameter to the Python script (or a `jsonBufSize` URL query parameter to the REST URL) to enlarge the buffer size, but this buffer is on the ESP32 board, so things do have to fit in the ESP32 RAM.
 
