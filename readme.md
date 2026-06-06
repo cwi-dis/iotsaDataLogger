@@ -6,9 +6,11 @@
 IotsaDataLogger reads an analog sensor repeatedly at a settable interval and records these readings in a buffer.
 The buffer can then be read over the web as JSON data.
 
-The intention is that the data logger is battery operated, reads values with a fairly long interval between readings, and uses deep sleep to conserve batteries. An RTC will keep the time during sleep (but the internal ESP32 ULP governs wakeup from deep sleep). Average power consumption is about 1 mA (depending on interval, of course) with the given schematic, so more aimed at big batteries than at penlites or coin cells.
+The intention is that the data logger is battery operated, reads values with a fairly long interval between readings, and uses deep sleep to conserve batteries. Average power consumption is about 1 mA (depending on interval, of course) with the given schematic, so more aimed at big batteries than at penlites or coin cells.
 
-When the device wakes from sleep it takes a measurement, stores it and goes to sleep again, _unless the configured wifi network is available_. If the wifi network is available the device remains awake and can be read out. It will also try and synchronize the RTC using NTP.
+A DS1302 RTC module keeps wall-clock time across deep-sleep cycles. Because the DS1302 is not very accurate, whenever the device connects to WiFi it synchronises the RTC from NTP before going back to sleep.
+
+When the device wakes from sleep it takes a measurement, stores it and goes to sleep again, _unless the configured wifi network is available_. If the wifi network is available the device remains awake and can be read out.
 
 The use case this sensor was built for is monitoring a solar powered holiday home. The sensor is powered from the solar battery and takes readings of the battery voltage every hour. Once in a while I come by and start the WiFi network. After an hour I can get the readings of how the battery charged and discharged over the last couple of weeks.
 
