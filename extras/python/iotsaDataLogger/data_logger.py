@@ -1,4 +1,6 @@
 import csv
+import io
+import requests
 import iotsa
 import matplotlib.pyplot as pyplot
 import pandas
@@ -9,26 +11,24 @@ class DataLogger:
         self.verbose = verbose
         self.device = None
 
-    def read_device(self, device, archive, jsonBufSize=None, kwargs={}):
+    def read_device(self, device, archive, kwargs={}):
         self.device = iotsa.IotsaDevice(device, **kwargs)
-        urlArgs = []
-        if jsonBufSize:
-            urlArgs.append(f'jsonBufSize={jsonBufSize}')
-        if archive:
-            urlArgs.append('archive=1')
-        if urlArgs:
-            urlArgs = '&'.join(urlArgs)
-            endPoint = f'datalogger?{urlArgs}'
-        else:
-            endPoint = 'datalogger'
+        ph = self.device.protocolHandler
+        filename = 'archive.csv' if archive else 'data.csv'
+        url = ph.baseURL + f'datalogger/{filename}'
+        headers = {}
+        if ph.bearer:
+            headers['Authorization'] = 'Bearer ' + ph.bearer
         if self.verbose:
-            print(f"read_device: endpoint is {endPoint}")
-        api = self.device.getApi(endPoint)
-        api_data = api.getAll()
-        data = api_data['data']
+            print(f"read_device: fetching {url}")
+        response = requests.get(url, auth=ph.auth, verify=not ph.noverify, headers=headers)
+        response.raise_for_status()
+        reader = csv.DictReader(io.StringIO(response.text), quoting=csv.QUOTE_NONNUMERIC)
+        data = list(reader)
         if self.verbose:
-            print(f"read_device: got {len(data)} records, time={api_data['now']}")
-            print(f'read_file: first={data[0]}, last={data[-1]}')
+            print(f"read_device: got {len(data)} records")
+            if data:
+                print(f'read_device: first={data[0]}, last={data[-1]}')
         self.data = self.data + data
         self._sort()
 
