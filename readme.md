@@ -13,6 +13,21 @@ The use case this was built for is monitoring a solar-powered holiday home: the 
 
 Home page is <https://github.com/cwi-dis/iotsaDataLogger>.
 
+## Power and WiFi behaviour
+
+On power-up or reset the device:
+
+1. Takes a measurement and stores it.
+2. Checks whether the configured WiFi network is available.
+3. If WiFi is **not** available: goes back into deep sleep until the next interval.
+4. If WiFi **is** available: stays awake, connects, syncs time from NTP, and serves data over HTTP until powered off or reset.
+
+So to read out the device, simply make sure the WiFi network is up and **press the reset button** (or power-cycle the device). It will reboot, find the network, and stay awake.
+
+The reset button on the reference hardware (see `extras/hardware/`) is wired to the ESP32 EN pin. There is no separate "stay awake" button — WiFi availability is the only criterion.
+
+To reconfigure the device (change WiFi network, hostname, etc.), follow the standard [iotsa configuration procedure](https://github.com/cwi-dis/iotsa): visit `http://yourdevice.local/config`, request configuration mode, then power-cycle within a few minutes.
+
 ## Hardware requirements
 
 - An ESP32-based board (tested: `esp32thing`, `pico32`).
@@ -35,7 +50,7 @@ Configure the acquisition module:
 
 - Interval between readings
 - Whether to use deep sleep
-- ADC calibration: `adcMultiply` (scale factor) and `adcOffset` (offset). The ESP32 ADC is not very linear, and there is also the voltage divider to account for. Start with `factor=1` and `offset=0`, supply known voltages and iterate until readings match.
+- ADC calibration: `adcMultiply` (scale factor) and `adcOffset` (offset). The ESP32 ADC is not very linear, and there is also the voltage divider to account for. In practice, if your voltage range is bounded (e.g. 10–16V for a lead-acid battery), leaving `adcOffset` at 0 and only tuning `adcMultiply` against a known reference voltage is sufficient.
 
 ## Python tool
 
