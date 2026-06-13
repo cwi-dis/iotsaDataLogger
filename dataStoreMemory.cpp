@@ -2,7 +2,7 @@
 
 void DataStoreMemory::add(timestamp_type ts, const dataStoreItem& value)
 {
-  if (nItem >= DATALOGGERBUFFERSIZE) archive();
+  if (nItem >= DATALOGGERBUFFERSIZE) _trim();
   items[nItem].value = value;
   items[nItem].timestamp = ts;
   nItem++;
@@ -11,20 +11,15 @@ void DataStoreMemory::add(timestamp_type ts, const dataStoreItem& value)
 timestamp_type DataStoreMemory::latest() {
   if (nItem <= 0) return 0;
   return items[nItem-1].timestamp;
-
 }
 
-void DataStoreMemory::archive()
+void DataStoreMemory::_trim()
 {
   int toRemove = nItem - DATALOGGERBUFFERMINSIZE;
   if (toRemove <= 0) return;
   memmove(items, items+toRemove, DATALOGGERBUFFERMINSIZE*sizeof(DataStoreMemoryRecord));
-  IotsaSerial.printf("DataStoreMemory: compact %d items\n", toRemove);
+  IotsaSerial.printf("DataStoreMemory: trim %d items\n", toRemove);
   nItem -= toRemove;
-}
-
-bool DataStoreMemory::should_archive() {
-    return nItem > DATALOGGERBUFFERSIZE;
 }
 
 void DataStoreMemory::forget(timestamp_type ts) {
@@ -39,13 +34,10 @@ void DataStoreMemory::forget(timestamp_type ts) {
     }
 }
 
-void DataStoreMemory::toJSON(JsonObject &replyObj, bool archived, bool summary)
+void DataStoreMemory::toJSON(JsonObject &replyObj, bool summary)
 {
-  if (!archived) {
-    replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
-  }
+  replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
   JsonArray values = replyObj.createNestedArray("data");
-  if (archived) return;
 
   if (summary) {
     replyObj["count"] = nItem;
@@ -68,10 +60,9 @@ void DataStoreMemory::toJSON(JsonObject &replyObj, bool archived, bool summary)
   }
 }
 
-void DataStoreMemory::toCSV(IotsaWebServer *server, bool archived) {
+void DataStoreMemory::toCSV(IotsaWebServer *server) {
   server->send(200, "text/csv", "");
   server->sendContent("t,ts,v\r\n");
-  if (archived) return;
   for(int i=0; i<nItem; i++) {
     char buf[100];
     std::string tstring = FORMAT_TIMESTAMP(items[i].timestamp);
@@ -83,18 +74,13 @@ void DataStoreMemory::toCSV(IotsaWebServer *server, bool archived) {
     String sBuf(buf);
     server->sendContent(sBuf);
   }
-  server->sendContent("\"2023-06-26T08:30:18\",0,12.42\r\n");
 }
 
-void DataStoreMemory::toHTML(String& reply, bool archived, bool summary)
+void DataStoreMemory::toHTML(String& reply, bool summary)
 {
   reply += "<p>Current time: ";
   auto ts = FORMAT_TIMESTAMP(GET_TIMESTAMP());
   reply += ts.c_str();
-  if (archived) {
-    reply += ", no archived data.</p>";
-    return;
-  }
   reply += ", " + String(size()) + " entries.";
   reply += "</p>";
 

@@ -12,8 +12,8 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose messages")
     parser.add_argument("-o", "--output", action="store", metavar="FILE", help="Store data to file as CSV")
     parser.add_argument("-m", "--merge", action="store_true", help="Merge CSV data into output file in stead of appending")
-    parser.add_argument("-a", "--archive", action="store_true", help="Get archived data in stead of current data from device")
-    parser.add_argument("--clean", action="store_true", help="Archive data one device after getting it")
+    parser.add_argument("--raw", action="store_true", help="Get raw per-reading data instead of daily summaries from device")
+    parser.add_argument("--clean", action="store_true", help="Archive data on device after getting it")
     args = parser.parse_args()
     logger = DataLogger(verbose=args.verbose)
     if args.device:
@@ -21,7 +21,7 @@ def main():
         for pair in args.devarg:
             k, v = pair.split('=')
             kwargs[k] = v
-        logger.read_device(args.device, args.archive, kwargs)
+        logger.read_device(args.device, args.raw, kwargs)
     for a in args.input:
         logger.read_file(a)
     if args.merge:
@@ -36,10 +36,7 @@ def main():
     if args.graph:
         logger.graph()
     if args.clean:
-        if args.archive:
-            print(f'{parser.prog}: cannot use --clean with --archive')
-        else:
-            print(f'{parser.prog}: --clean not yet implemented')
+        print(f'{parser.prog}: --clean not yet implemented')
 
 if __name__ == '__main__':
     main()

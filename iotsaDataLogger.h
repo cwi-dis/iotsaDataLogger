@@ -35,7 +35,7 @@ protected:
   void configSave() override;
   void handler();
   void dataHandler();
-  void archiveHandler();
+  void dailyHandler();
   bool getHandler(const char *path, JsonObject& reply) override;
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
   int interval;

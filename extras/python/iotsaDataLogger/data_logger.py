@@ -10,11 +10,13 @@ class DataLogger:
         self.data = []
         self.verbose = verbose
         self.device = None
+        self._raw = False
 
-    def read_device(self, device, archive, kwargs={}):
+    def read_device(self, device, raw=False, kwargs={}):
+        self._raw = raw
         self.device = iotsa.IotsaDevice(device, **kwargs)
         ph = self.device.protocolHandler
-        filename = 'archive.csv' if archive else 'data.csv'
+        filename = 'data.csv' if raw else 'data_daily.csv'
         url = ph.baseURL + f'datalogger/{filename}'
         headers = {}
         if ph.bearer:
@@ -36,16 +38,22 @@ class DataLogger:
         data = []
         with open(filename, 'r') as fp:
             csv_reader = csv.DictReader(fp)
+            if csv_reader.fieldnames and csv_reader.fieldnames[0] == 'date':
+                self._raw = False
+            else:
+                self._raw = True
             for record in csv_reader:
                 data.append(record)
         if self.verbose:
             print(f'read_file: read {len(data)} records from {filename}')
-            print(f'read_file: first={data[0]}, last={data[-1]}')
+            if data:
+                print(f'read_file: first={data[0]}, last={data[-1]}')
         self.data = self.data + data
         self._sort()
 
     def _sort(self):
-        data = sorted(self.data, key=lambda r: r['t'])
+        sort_key = 't' if self._raw else 'date'
+        data = sorted(self.data, key=lambda r: r[sort_key])
         self.data = []
         prevd = None
         for d in data:
@@ -54,7 +62,8 @@ class DataLogger:
             prevd = d
         if self.verbose:
             print(f'_sort: {len(self.data)} records total.')
-            print(f'_sort: first={data[0]}, last={data[-1]}')
+            if data:
+                print(f'_sort: first={data[0]}, last={data[-1]}')
 
     def write_file(self, filename):
         import sys
@@ -71,8 +80,13 @@ class DataLogger:
 
     def graph(self):
         pd = pandas.DataFrame(self.data)
-        pd.v = pandas.to_numeric(pd.v)
-        pd.ts = pandas.to_numeric(pd.ts)
-        pd.t = pandas.to_datetime(pd.t)
-        pd.plot(x='t', y='v')
+        if self._raw:
+            pd['v'] = pandas.to_numeric(pd['v'])
+            pd['t'] = pandas.to_datetime(pd['t'])
+            pd.plot(x='t', y='v')
+        else:
+            pd['min_v'] = pandas.to_numeric(pd['min_v'])
+            pd['max_v'] = pandas.to_numeric(pd['max_v'])
+            pd['date'] = pandas.to_datetime(pd['date'])
+            pd.plot(x='date', y=['min_v', 'max_v'])
         pyplot.show()

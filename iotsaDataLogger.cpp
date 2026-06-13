@@ -4,7 +4,6 @@
 #ifdef IOTSA_WITH_WEB
 void
 IotsaDataLoggerMod::handler() {
-  bool archived = false;
   bool anyChanged = false;
   if( server->hasArg("interval")) {
     if (needsAuthentication()) return;
@@ -30,33 +29,9 @@ IotsaDataLoggerMod::handler() {
     deepSleep = (bool)sv.toInt();
     anyChanged = true;
   }
-  if (server->hasArg("forgetBefore")) {
-    if (needsAuthentication()) return;
-    String sv = server->arg("forgetBefore");
-    if (sv != "") {
-      timestamp_type ts = sv.toInt();
-      store->forget(ts);
-    }
-  }
-  if (server->hasArg("doArchive")) {
-    if (needsAuthentication()) return;
-    String sv = server->arg("doArchive");
-    if (sv != "") {
-      store->archive();
-      // Hack: we call loop() to take a single reading
-      loop();
-    }
-  }
-  if (server->hasArg("archived")) {
-    String sv = server->arg("archived");
-    if (sv != "") {
-      archived = true;
-    }
-  }
   if (anyChanged) configSave();
 
   String message = "<html><head><title>Timed Data Logger Module</title></head><body><h1>Timed Data Logger Module</h1>";
-  message += "<form method='get'><input type='submit' value='Refresh'><input type='checkbox' name='archived' value='1'>Show archived data in stead of current data</form><br>";
 
   message += "<h2>Acquisition settings</h2>";
   message += "<form method='get'>Interval (seconds): <input name='interval' value='";
@@ -71,11 +46,8 @@ IotsaDataLoggerMod::handler() {
   message += "<br><input type='submit'></form>";
 
   message += "<h2>Acquisition buffer</h2>";
-  message += "<form method='get'>Archive before (unix timestamp): <input name='forgetBefore'><input type='submit' value='Forget'></form><br>";
-  message += "<form method='get'>Archive all data: <input type='hidden' name='doArchive' value='1'><input type='submit' value='Archive Data Store'></form><br>";
-  
   message += "<form method='get'><input type='submit' value='Refresh'></form></br>";
-  store->toHTML(message, archived, true);
+  store->toHTML(message, true);
   message += "</body></html>";
   server->send(200, "text/html", message);
 }
@@ -87,9 +59,7 @@ String IotsaDataLoggerMod::info() {
 #endif // IOTSA_WITH_WEB
 
 bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
-  store->toJSON(reply, false, true);
-  JsonObject archive = reply.createNestedObject("archive");
-  store->toJSON(archive, true, true);
+  store->toJSON(reply, true);
   reply["interval"] = interval;
   reply["adcMultiply"] = adcMultiply;
   reply["adcOffset"] = adcOffset;
@@ -99,12 +69,12 @@ bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
 
 void
 IotsaDataLoggerMod::dataHandler() {
-  store->toCSV(server, false);
+  store->toCSV(server);
 }
 
 void
-IotsaDataLoggerMod::archiveHandler() {
-  store->toCSV(server, true);
+IotsaDataLoggerMod::dailyHandler() {
+  store->toCSVDaily(server);
 }
 
 bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
@@ -154,7 +124,7 @@ void IotsaDataLoggerMod::serverSetup() {
 #ifdef IOTSA_WITH_WEB
   server->on("/datalogger", std::bind(&IotsaDataLoggerMod::handler, this));
   server->on("/datalogger/data.csv", std::bind(&IotsaDataLoggerMod::dataHandler, this));
-  server->on("/datalogger/archive.csv", std::bind(&IotsaDataLoggerMod::archiveHandler, this));
+  server->on("/datalogger/data_daily.csv", std::bind(&IotsaDataLoggerMod::dailyHandler, this));
 #endif
   api.setup("/api/datalogger", true, true);
   name = "datalogger";
@@ -183,21 +153,19 @@ void IotsaDataLoggerMod::loop() {
   timestamp_type lastReading = store->latest();
   timestamp_type nextReading = lastReading + interval;
   int nextInterval = interval;
-  IotsaSerial.printf("xxxjack loop now=%ld lastReading=%ld\n", now, lastReading);
   if (
       now >= nextReading // Normal: interval has passed
-      || now < lastReading // Abnormal: clock has gone back in time.
+      || now < lastReading // Abnormal: clock has gone back in time
     ) {
     lastReading = now;
-    // xxxx save lastReading in NVM
     float value = 0;
     for(int i=0; i<nSample; i++) {
       int iValue = analogRead(PIN_ANALOG_IN);
       value += iValue * adcMultiply + adcOffset;
     }
     value /= nSample;
-    IotsaSerial.printf("xxxjack value=%f\n", value);
     store->add(now, value);
+    store->compress(now);
   } else {
     // We have not slept long enough.
     nextInterval = (int)(nextReading - now);
@@ -207,11 +175,9 @@ void IotsaDataLoggerMod::loop() {
   // Should we go to sleep?
   //
   if (deepSleep) {
-    const char *bootReason = iotsaConfig.getBootReason();
     bool hasWifi = iotsaConfig.networkIsUp();
     bool canSleep = iotsaConfig.canSleep();
     int pin0 = digitalRead(0);
-    IotsaSerial.printf("xxxjack bootReason=%s hasWifi=%d pin0=%d deepSleep=%d canSleep=%d nextInterval=%d\n", bootReason, hasWifi, pin0, deepSleep, canSleep, nextInterval);
     if (!hasWifi && canSleep && pin0) {
       IotsaSerial.println("Deep sleep.");
       delay(10);

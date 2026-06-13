@@ -6,8 +6,6 @@
 
 //
 // Definitions for using NTP/RTC/Unix time.
-// May still be changed back to using millis() timestamps from boot,
-// but needs work.
 //
 typedef time_t timestamp_type;
 #define GET_TIMESTAMP() (time(nullptr))
@@ -16,6 +14,13 @@ inline std::string FORMAT_TIMESTAMP(timestamp_type ts) {
   struct tm *tm = localtime(&ts);
   char buf[25];
   size_t sz = strftime(buf,  sizeof buf, "%Y-%m-%dT%H:%M:%S", tm);
+  return std::string(buf, sz);
+}
+
+inline std::string FORMAT_DATE(timestamp_type ts) {
+  struct tm *tm = gmtime(&ts);
+  char buf[12];
+  size_t sz = strftime(buf, sizeof buf, "%Y-%m-%d", tm);
   return std::string(buf, sz);
 }
 
@@ -28,12 +33,12 @@ public:
   virtual void add(timestamp_type ts, const dataStoreItem& value) = 0;
   virtual timestamp_type latest() = 0;
   virtual int size() = 0;
-  virtual void archive() = 0;
-  virtual bool should_archive() = 0;
   virtual void forget(timestamp_type ts) = 0;
-  virtual void toJSON(JsonObject& reply, bool archived, bool summary) = 0;
-  virtual void toHTML(String& reply, bool archived, bool summary) = 0;
-  virtual void toCSV(IotsaWebServer *server, bool archived) = 0;
+  virtual void toJSON(JsonObject& reply, bool summary) = 0;
+  virtual void toHTML(String& reply, bool summary) = 0;
+  virtual void toCSV(IotsaWebServer *server) = 0;
+  virtual void compress(timestamp_type now) {}
+  virtual void toCSVDaily(IotsaWebServer *server) {}
 };
 
 #endif

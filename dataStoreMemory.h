@@ -23,13 +23,12 @@ public:
   void add(timestamp_type ts, const dataStoreItem& value) override;
   timestamp_type latest() override;
   int size() override { return nItem; }
-  void archive() override;
-  bool should_archive() override;
   void forget(timestamp_type ts) override;
-  void toJSON(JsonObject& reply, bool archived, bool summary) override;
-  void toHTML(String& reply, bool archived, bool summary) override;
-  void toCSV(IotsaWebServer *server, bool archived) override;
+  void toJSON(JsonObject& reply, bool summary) override;
+  void toHTML(String& reply, bool summary) override;
+  void toCSV(IotsaWebServer *server) override;
 private:
+  void _trim();
   int nItem;
   DataStoreMemoryRecord items[DATALOGGERBUFFERSIZE];
 };
