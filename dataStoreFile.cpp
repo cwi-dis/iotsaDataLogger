@@ -1,6 +1,5 @@
 #include "dataStoreFile.h"
 
-const int COMPACT_THRESHOLD = 1000; // At that size this are difficult to fit into memory for toHTML and toJSON.
 
 const char* datastoreFilename = "/littlefs/datastore.dat";
 const char* datastoreBackup = "/littlefs/datastore.001";
@@ -69,7 +68,9 @@ void DataStoreFile::archive()
 }
 
 bool DataStoreFile::should_archive() {
-    return size() > COMPACT_THRESHOLD;
+    // xxxclaude TODO: revisit when iotsa exposes LittleFS usage (see cwi-dis/iotsa#110).
+    // For now always return false — the record-count threshold was not meaningful.
+    return false;
 }
 
 void DataStoreFile::forget(timestamp_type ts) {
