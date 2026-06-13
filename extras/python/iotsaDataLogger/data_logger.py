@@ -23,7 +23,7 @@ class DataLogger:
             print(f"read_device: fetching {url}")
         response = requests.get(url, auth=ph.auth, verify=not ph.noverify, headers=headers)
         response.raise_for_status()
-        reader = csv.DictReader(io.StringIO(response.text), quoting=csv.QUOTE_NONNUMERIC)
+        reader = csv.DictReader(io.StringIO(response.text))
         data = list(reader)
         if self.verbose:
             print(f"read_device: got {len(data)} records")
@@ -35,7 +35,7 @@ class DataLogger:
     def read_file(self, filename):
         data = []
         with open(filename, 'r') as fp:
-            csv_reader = csv.DictReader(fp, quoting=csv.QUOTE_NONNUMERIC)
+            csv_reader = csv.DictReader(fp)
             for record in csv_reader:
                 data.append(record)
         if self.verbose:
@@ -57,10 +57,15 @@ class DataLogger:
             print(f'_sort: first={data[0]}, last={data[-1]}')
 
     def write_file(self, filename):
-        with open(filename, 'w') as fp:
+        import sys
+        fp = sys.stdout if filename == '-' else open(filename, 'w')
+        try:
             csv_writer = csv.DictWriter(fp, self.data[0].keys(), quoting=csv.QUOTE_NONNUMERIC)
             csv_writer.writeheader()
             csv_writer.writerows(self.data)
+        finally:
+            if fp is not sys.stdout:
+                fp.close()
         if self.verbose:
             print(f'write_file: wrote {len(self.data)} records to {filename}')
 

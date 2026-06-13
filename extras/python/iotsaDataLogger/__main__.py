@@ -31,6 +31,8 @@ def main():
             logger.read_file(args.output)
     if args.output:
         logger.write_file(args.output)
+    elif not args.graph:
+        logger.write_file('-')
     if args.graph:
         logger.graph()
     if args.clean:
