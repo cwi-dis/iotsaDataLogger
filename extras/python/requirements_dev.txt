@@ -1,0 +1,2 @@
+-e ../../../iotsa/extras/python
+-r requirements.txt
