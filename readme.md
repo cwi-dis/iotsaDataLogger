@@ -3,65 +3,118 @@
 ![build-platformio](https://github.com/cwi-dis/iotsaDataLogger/workflows/build-platformio/badge.svg)
 ![build-arduino](https://github.com/cwi-dis/iotsaDataLogger/workflows/build-arduino/badge.svg)
 
-IotsaDataLogger reads an analog sensor repeatedly at a settable interval and records these readings in a buffer.
-The buffer can then be read over the web as JSON data.
+IotsaDataLogger reads an analog sensor repeatedly at a configurable interval and records readings in a LittleFS-backed file on the device. Readings can be retrieved over the network as CSV data.
 
-The intention is that the data logger is battery operated, reads values with a fairly long interval between readings, and uses deep sleep to conserve batteries. Average power consumption is about 1 mA (depending on interval, of course) with the given schematic, so more aimed at big batteries than at penlites or coin cells.
+The device is intended to be battery-operated, taking readings at long intervals (minutes to hours) and using deep sleep between readings to conserve power. A DS1302 RTC module keeps wall-clock time across deep-sleep cycles and syncs from NTP whenever WiFi is available.
 
-A DS1302 RTC module keeps wall-clock time across deep-sleep cycles. Because the DS1302 is not very accurate, whenever the device connects to WiFi it synchronises the RTC from NTP before going back to sleep.
+When the device wakes from sleep it takes a measurement and goes back to sleep, _unless the configured WiFi network is available_. When WiFi is available the device stays awake and can be read out.
 
-When the device wakes from sleep it takes a measurement, stores it and goes to sleep again, _unless the configured wifi network is available_. If the wifi network is available the device remains awake and can be read out.
+The use case this was built for is monitoring a solar-powered holiday home: the device reads battery voltage once an hour, running on the solar battery itself. Whenever you visit and enable the WiFi network, you can retrieve weeks of readings.
 
-The use case this sensor was built for is monitoring a solar powered holiday home. The sensor is powered from the solar battery and takes readings of the battery voltage every hour. Once in a while I come by and start the WiFi network. After an hour I can get the readings of how the battery charged and discharged over the last couple of weeks.
-
-Home page is <https://github.com/cwi-dis/iotsaSensor>.
-
-## Software requirements
-
-* PlatformIO or Arduino IDE.
-* The iotsa framework, download from <https://github.com/cwi-dis/iotsa>.
+Home page is <https://github.com/cwi-dis/iotsaDataLogger>.
 
 ## Hardware requirements
 
-* an esp8266 board, such as an ESP-12, ESP-201 or iotsa board.
-* An analog sensor.
+- An ESP32-based board (tested: `esp32thing`, `pico32`).
+- An analog sensor connected to GPIO 34.
+- A DS1302 RTC module (optional but recommended for accurate timestamps).
 
+## Software requirements
 
+- PlatformIO (recommended) or Arduino IDE.
+- The [iotsa framework](https://github.com/cwi-dis/iotsa).
 
-## Building and Configuring
+## Building and configuring
 
-- Build using PlatformIO, flash to the board.
-- Configure the board, see the [iotsa](https://github.com/cwi-dis/iotsa) instructions for general guidance:
-	- WiFi network
-	- hostname
-	- timezone and NTP server
-- Configure the acquisition module:
-	- Interval between readings
-	- Whether to use deep sleep
-	- ADC multiplication factor and offset. The ESP32 ADC is not very linear, and there is also the voltage divider resistors to cater for. Start with `factor=1` and `offset=0`, supply minimum expected voltage and maximum expected voltage. From these readings determine an initial `factor` (from delta-voltage and delta-reading). Read min and max again, and determine initial `offset`. Repeat until happy.
+Build using PlatformIO and flash to the board. Then configure the device — see the [iotsa](https://github.com/cwi-dis/iotsa) instructions for general guidance:
 
-## Operation
+- WiFi network and hostname
+- Timezone and NTP server
 
+Configure the acquisition module:
 
-To read the values use the web interface, or the Python package in `extras/python`. Set it up once:
+- Interval between readings
+- Whether to use deep sleep
+- ADC calibration: `adcMultiply` (scale factor) and `adcOffset` (offset). The ESP32 ADC is not very linear, and there is also the voltage divider to account for. Start with `factor=1` and `offset=0`, supply known voltages and iterate until readings match.
+
+## Python tool
+
+The `extras/python/` directory contains the `iotsaDataLogger` Python tool for retrieving, storing, merging, and graphing data.
+
+### Setup
+
+From the repo root:
 
 ```sh
-python3 -m venv venv
-source venv/bin/activate
-pip install extras/python
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ../iotsa/extras/python/
+pip install -e extras/python/
 ```
 
-Then activate the venv and use the tool:
+Or, if you have the `requirements_dev.txt`:
 
 ```sh
-source venv/bin/activate
-iotsaDataLogger --device <hostname> --output readings.csv --graph
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r extras/python/requirements_dev.txt
+pip install -e extras/python/
 ```
 
-It can read the recorded values to a CSV file, optionally merging, and graph the results.
+### Usage
 
-There is an issue with the REST API with large datasets. You can supply the `--bufsize` parameter to the Python script (or a `jsonBufSize` URL query parameter to the REST URL) to enlarge the buffer size, but this buffer is on the ESP32 board, so things do have to fit in the ESP32 RAM.
+Retrieve current data from a device and print as CSV:
 
-After reading the values and saving them on the computer you can archive the readings (either all readings or up to a given timestamp), so from that point on the archived readings are no longer returned and don't contribute to the data size. The most recently archived set of readings is still available with `--archive` (until they are overwritten by the next archival).
+```sh
+iotsaDataLogger -d yourdevice.local
+```
 
-There are some sample CSV files in `extras/sandbox`.
+Save to a file:
+
+```sh
+iotsaDataLogger -d yourdevice.local -o readings.csv
+```
+
+Merge new readings into an existing file (deduplicates and sorts by timestamp):
+
+```sh
+iotsaDataLogger -d yourdevice.local -o readings.csv -m
+```
+
+Graph the data:
+
+```sh
+iotsaDataLogger -d yourdevice.local -g
+```
+
+Read from a saved CSV file and graph it:
+
+```sh
+iotsaDataLogger -i readings.csv -g
+```
+
+Retrieve archived data instead of current data:
+
+```sh
+iotsaDataLogger -d yourdevice.local -a
+```
+
+### Full options
+
+```
+iotsaDataLogger [-h] [-d HOST] [-D [NAME=VALUE ...]] [-i [FILE ...]]
+                [-g] [-v] [-o FILE] [-m] [-a] [--clean]
+
+  -d HOST          Hostname or IP of the device
+  -D NAME=VALUE    Extra iotsa connection arguments (e.g. bearer token)
+  -i FILE          Read from CSV file instead of device (repeatable)
+  -o FILE          Write output to CSV file (default: stdout)
+  -m               Merge into output file instead of overwriting
+  -a               Retrieve archived data instead of current data
+  -g               Show a graph of the data
+  -v               Verbose output
+```
+
+## Sample data
+
+Some sample CSV files are in `extras/sandbox/`.
