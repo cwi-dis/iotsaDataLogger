@@ -178,6 +178,7 @@ void IotsaDataLoggerMod::loop() {
     bool hasWifi = iotsaConfig.networkIsUp();
     bool canSleep = iotsaConfig.canSleep();
     int pin0 = digitalRead(0);
+    // Only sleep when WiFi is absent: stay awake while connected so the web UI remains accessible.
     if (!hasWifi && canSleep && pin0) {
       IotsaSerial.println("Deep sleep.");
       delay(10);
