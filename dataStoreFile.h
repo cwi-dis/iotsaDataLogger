@@ -30,9 +30,10 @@ public:
   int size() override;
   void forget(timestamp_type ts) override;
   void toJSON(JsonObject& reply, bool summary) override;
-  void toHTML(String& reply, bool summary) override;
+  void toHTML(String& reply) override;
+  void toHTMLDaily(String& reply) override;
   void toCSV(IotsaWebServer *server) override;
-  void compress(timestamp_type now) override;
+  void compress(timestamp_type now, int rawRetentionDays) override;
   void toCSVDaily(IotsaWebServer *server) override;
 
 private:

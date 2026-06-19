@@ -76,27 +76,24 @@ void DataStoreMemory::toCSV(IotsaWebServer *server) {
   }
 }
 
-void DataStoreMemory::toHTML(String& reply, bool summary)
+void DataStoreMemory::toHTML(String& reply)
 {
   reply += "<p>Current time: ";
-  auto ts = FORMAT_TIMESTAMP(GET_TIMESTAMP());
-  reply += ts.c_str();
-  reply += ", " + String(size()) + " entries.";
-  reply += "</p>";
+  reply += FORMAT_TIMESTAMP(GET_TIMESTAMP()).c_str();
+  reply += ", " + String(size()) + " entries.</p>";
 
-  reply += "<table><tr><th>Time</th><th>Timestamp</th><th>Value</th></tr>";
-  int step = 1;
-  if (summary) {
-    step = nItem-1;
-  }
-  for (int i=0; i<nItem; i+=step) {
+  if (nItem == 0) return;
+  reply += "<table><tr><th>Time</th><th>Value</th></tr>";
+  reply += "<tr><td>";
+  reply += FORMAT_TIMESTAMP(items[0].timestamp).c_str();
+  reply += "</td><td>";
+  reply += String(items[0].value);
+  reply += "</td></tr>";
+  if (nItem > 1) {
     reply += "<tr><td>";
-    auto ts = FORMAT_TIMESTAMP(items[i].timestamp);
-    reply += ts.c_str();
+    reply += FORMAT_TIMESTAMP(items[nItem-1].timestamp).c_str();
     reply += "</td><td>";
-    reply += String(items[i].timestamp);
-    reply += "</td><td>";
-    reply += String(items[i].value);
+    reply += String(items[nItem-1].value);
     reply += "</td></tr>";
   }
   reply += "</table>";

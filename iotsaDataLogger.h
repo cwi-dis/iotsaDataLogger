@@ -41,6 +41,7 @@ protected:
   int interval;
   float adcMultiply;
   float adcOffset;
+  int rawRetentionDays = 14;
   const int nSample = 5;
   const int minimumUptimeMillis = 15000;
   bool deepSleep = false;

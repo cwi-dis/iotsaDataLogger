@@ -4,8 +4,6 @@
 const char* datastoreFilename = "/littlefs/datastore.dat";
 const char* datastoreDailyFilename = "/littlefs/datastore_daily.dat";
 
-// Raw readings older than this are compressed into daily summaries.
-static const timestamp_type RAW_RETENTION_SECS = 14 * 24 * 3600;
 
 void DataStoreFile::add(timestamp_type ts, const dataStoreItem& value)
 {
@@ -85,7 +83,7 @@ void DataStoreFile::forget(timestamp_type ts) {
   fclose(ofp);
 }
 
-void DataStoreFile::compress(timestamp_type now) {
+void DataStoreFile::compress(timestamp_type now, int rawRetentionDays) {
   FILE *fp = fopen(datastoreFilename, "rb");
   if (fp == NULL) return;
   DataStoreFileRecord first;
@@ -93,7 +91,7 @@ void DataStoreFile::compress(timestamp_type now) {
   fclose(fp);
   if (sz != 1) return;
 
-  timestamp_type cutoff = now - RAW_RETENTION_SECS;
+  timestamp_type cutoff = now - (timestamp_type)rawRetentionDays * 24 * 3600;
   int cutoff_day = (int)(cutoff / 86400);
   if ((int)(first.timestamp / 86400) >= cutoff_day) return;
 
@@ -258,62 +256,76 @@ void DataStoreFile::_storeRec(DataStoreFileRecord rec, JsonObject obj) {
     obj["v"] = rec.value;
 }
 
-void DataStoreFile::toHTML(String& reply, bool summary)
+void DataStoreFile::toHTML(String& reply)
 {
   FILE *fp = fopen(datastoreFilename, "rb");
   if (fp == NULL) {
-    IotsaSerial.println("DataStoreFile: toHTML: fopen failed");
+    reply += "<p>No raw data yet.</p>";
     return;
   }
   reply += "<p>Current time: ";
-  auto ts = FORMAT_TIMESTAMP(GET_TIMESTAMP());
-  reply += ts.c_str();
-  reply += ", " + String(size()) + " raw entries.";
-  reply += "<br>Raw data: <a href='/datalogger/data.csv'>/datalogger/data.csv</a>.";
-  reply += "<br>Daily summary: <a href='/datalogger/data_daily.csv'>/datalogger/data_daily.csv</a>.";
-  reply += "</p>";
+  reply += FORMAT_TIMESTAMP(GET_TIMESTAMP()).c_str();
+  reply += ", " + String(size()) + " raw entries.</p>";
 
-  reply += "<table><tr><th>Time</th><th>Timestamp</th><th>Value</th></tr>";
-  if (summary) {
-    DataStoreFileRecord rec;
-    size_t sz = fread(&rec, sizeof(rec), 1, fp);
-    if (sz == 1) {
-      reply += "<tr><td>";
-      std::string ts = FORMAT_TIMESTAMP(rec.timestamp);
-      reply += ts.c_str();
-      reply += "</td><td>";
-      reply += String(rec.timestamp);
-      reply += "</td><td>";
-      reply += String(rec.value);
-      reply += "</td></tr>";
+  DataStoreFileRecord rec;
+  if (fread(&rec, sizeof(rec), 1, fp) == 1) {
+    reply += "<table><tr><th>Time</th><th>Value</th></tr>";
+    reply += "<tr><td>";
+    reply += FORMAT_TIMESTAMP(rec.timestamp).c_str();
+    reply += "</td><td>";
+    reply += String(rec.value);
+    reply += "</td></tr>";
 
-      while (fread(&rec, sizeof(rec), 1, fp) == 1) { }
+    while (fread(&rec, sizeof(rec), 1, fp) == 1) { }
 
-      reply += "<tr><td>";
-      ts = FORMAT_TIMESTAMP(rec.timestamp);
-      reply += ts.c_str();
-      reply += "</td><td>";
-      reply += String(rec.timestamp);
-      reply += "</td><td>";
-      reply += String(rec.value);
-      reply += "</td></tr>";
-    }
-  } else {
-    while(true) {
-      DataStoreFileRecord rec;
-      size_t sz = fread(&rec, sizeof(rec), 1, fp);
-      if (sz != 1) break;
-      reply += "<tr><td>";
-      auto ts = FORMAT_TIMESTAMP(rec.timestamp);
-      reply += ts.c_str();
-      reply += "</td><td>";
-      reply += String(rec.timestamp);
-      reply += "</td><td>";
-      reply += String(rec.value);
-      reply += "</td></tr>";
-    }
+    reply += "<tr><td>";
+    reply += FORMAT_TIMESTAMP(rec.timestamp).c_str();
+    reply += "</td><td>";
+    reply += String(rec.value);
+    reply += "</td></tr>";
+    reply += "</table>";
   }
   fclose(fp);
+}
+
+void DataStoreFile::toHTMLDaily(String& reply)
+{
+  FILE *fp = fopen(datastoreDailyFilename, "rb");
+  if (fp == NULL) {
+    reply += "<p>No daily summary data yet.</p>";
+    return;
+  }
+  DataStoreDailyFileRecord first, last;
+  int count = 0;
+  DataStoreDailyFileRecord rec;
+  while (fread(&rec, sizeof(rec), 1, fp) == 1) {
+    if (count == 0) first = rec;
+    last = rec;
+    count++;
+  }
+  fclose(fp);
+  if (count == 0) {
+    reply += "<p>No daily summary data yet.</p>";
+    return;
+  }
+  reply += "<p>" + String(count) + " daily entries.</p>";
+  reply += "<table><tr><th>Date</th><th>Min</th><th>Max</th></tr>";
+  reply += "<tr><td>";
+  reply += FORMAT_DATE(first.min_t).c_str();
+  reply += "</td><td>";
+  reply += String(first.min_v);
+  reply += "</td><td>";
+  reply += String(first.max_v);
+  reply += "</td></tr>";
+  if (count > 1) {
+    reply += "<tr><td>";
+    reply += FORMAT_DATE(last.min_t).c_str();
+    reply += "</td><td>";
+    reply += String(last.min_v);
+    reply += "</td><td>";
+    reply += String(last.max_v);
+    reply += "</td></tr>";
+  }
   reply += "</table>";
 }
 

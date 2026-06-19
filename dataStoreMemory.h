@@ -25,7 +25,7 @@ public:
   int size() override { return nItem; }
   void forget(timestamp_type ts) override;
   void toJSON(JsonObject& reply, bool summary) override;
-  void toHTML(String& reply, bool summary) override;
+  void toHTML(String& reply) override;
   void toCSV(IotsaWebServer *server) override;
 private:
   void _trim();

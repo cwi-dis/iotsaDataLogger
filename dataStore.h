@@ -35,9 +35,10 @@ public:
   virtual int size() = 0;
   virtual void forget(timestamp_type ts) = 0;
   virtual void toJSON(JsonObject& reply, bool summary) = 0;
-  virtual void toHTML(String& reply, bool summary) = 0;
+  virtual void toHTML(String& reply) = 0;
+  virtual void toHTMLDaily(String& reply) {}
   virtual void toCSV(IotsaWebServer *server) = 0;
-  virtual void compress(timestamp_type now) {}
+  virtual void compress(timestamp_type now, int rawRetentionDays) {}
   virtual void toCSVDaily(IotsaWebServer *server) {}
 };
 

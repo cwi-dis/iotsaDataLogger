@@ -29,6 +29,12 @@ IotsaDataLoggerMod::handler() {
     deepSleep = (bool)sv.toInt();
     anyChanged = true;
   }
+  if( server->hasArg("rawRetentionDays")) {
+    if (needsAuthentication()) return;
+    String sv = server->arg("rawRetentionDays");
+    rawRetentionDays = sv.toInt();
+    anyChanged = true;
+  }
   if (anyChanged) configSave();
 
   String message = "<html><head><title>Timed Data Logger Module</title></head><body><h1>Timed Data Logger Module</h1>";
@@ -43,17 +49,23 @@ IotsaDataLoggerMod::handler() {
   message +="'><br><input type='checkbox' name='deepSleep' value='1'";
   if (deepSleep) message += " checked";
   message += ">Deep Sleep between acquisitions (unless WiFi is available)";
+  message += "<br>Raw data retention (days): <input name='rawRetentionDays' value='";
+  message += String(rawRetentionDays);
+  message += "'>";
   message += "<br><input type='submit'></form>";
 
-  message += "<h2>Acquisition buffer</h2>";
-  message += "<form method='get'><input type='submit' value='Refresh'></form></br>";
-  store->toHTML(message, true);
+  message += "<h2>Daily measurements</h2>";
+  store->toHTMLDaily(message);
+  message += "<h2>Recent raw measurements</h2>";
+  store->toHTML(message);
   message += "</body></html>";
   server->send(200, "text/html", message);
 }
 
 String IotsaDataLoggerMod::info() {
-  String message = "<p>Timed data logger. See <a href=\"/datalogger\">/datalogger</a> for configuration, <a href=\"/api/datalogger\">/api/datalogger</a> for readings.</p>";
+  String message = "<p>Timed data logger. See <a href=\"/datalogger\">/datalogger</a> for configuration.</p>"
+    "<p><a href=\"/datalogger/data_daily.csv\">/datalogger/data_daily.csv</a> &mdash; daily min/max summaries (older data compressed, one row per day).</p>"
+    "<p><a href=\"/datalogger/data.csv\">/datalogger/data.csv</a> &mdash; recent measurements at full resolution.</p>";
   return message;
 }
 #endif // IOTSA_WITH_WEB
@@ -64,6 +76,7 @@ bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
   reply["adcMultiply"] = adcMultiply;
   reply["adcOffset"] = adcOffset;
   reply["deepSleep"] = deepSleep;
+  reply["rawRetentionDays"] = rawRetentionDays;
   return true;
 }
 
@@ -96,6 +109,10 @@ bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request
   }
   if (reqObj.containsKey("deepSleep")) {
     deepSleep = reqObj["deepSleep"];
+    anyChanged = true;
+  }
+  if (reqObj.containsKey("rawRetentionDays")) {
+    rawRetentionDays = reqObj["rawRetentionDays"];
     anyChanged = true;
   }
   if (reqObj.containsKey("forgetBefore")) {
@@ -136,6 +153,7 @@ void IotsaDataLoggerMod::configLoad() {
   cf.get("adcMultiply", adcMultiply, 1);
   cf.get("adcOffset", adcOffset, 0);
   cf.get("deepSleep", deepSleep, false);
+  cf.get("rawRetentionDays", rawRetentionDays, 14);
 }
 
 void IotsaDataLoggerMod::configSave() {
@@ -144,6 +162,7 @@ void IotsaDataLoggerMod::configSave() {
   cf.put("adcMultiply", adcMultiply);
   cf.put("adcOffset", adcOffset);
   cf.put("deepSleep", deepSleep);
+  cf.put("rawRetentionDays", rawRetentionDays);
 }
 
 void IotsaDataLoggerMod::loop() {
@@ -165,7 +184,7 @@ void IotsaDataLoggerMod::loop() {
     }
     value /= nSample;
     store->add(now, value);
-    store->compress(now);
+    store->compress(now, rawRetentionDays);
   } else {
     // We have not slept long enough.
     nextInterval = (int)(nextReading - now);
