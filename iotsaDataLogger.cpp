@@ -1,5 +1,6 @@
 #include "iotsaDataLogger.h"
 #include "iotsaConfigFile.h"
+#include <LittleFS.h>
 
 #ifdef IOTSA_WITH_WEB
 void
@@ -54,6 +55,15 @@ IotsaDataLoggerMod::handler() {
   message += "'>";
   message += "<br><input type='submit'></form>";
 
+  size_t fsTotal = LittleFS.totalBytes();
+  size_t fsUsed = LittleFS.usedBytes();
+  int fsPct = (int)(100.0f * fsUsed / fsTotal);
+  char fsBuf[64];
+  snprintf(fsBuf, sizeof(fsBuf), "%d KB / %d KB (%d%%)", (int)(fsUsed/1024), (int)(fsTotal/1024), fsPct);
+  message += "<h2>Storage</h2><p>Flash filesystem: ";
+  message += fsBuf;
+  message += "</p>";
+
   message += "<h2>Daily measurements</h2>";
   store->toHTMLDaily(message);
   message += "<h2>Recent raw measurements</h2>";
@@ -77,6 +87,8 @@ bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
   reply["adcOffset"] = adcOffset;
   reply["deepSleep"] = deepSleep;
   reply["rawRetentionDays"] = rawRetentionDays;
+  reply["fsUsed"] = (int)LittleFS.usedBytes();
+  reply["fsTotal"] = (int)LittleFS.totalBytes();
   return true;
 }
 
