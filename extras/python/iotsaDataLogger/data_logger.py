@@ -138,7 +138,7 @@ class DataLogger:
         else:
             fig, ax1 = plt.subplots(1, 1, figsize=(14, 4))
 
-        title = self.device.host if self.device else ''
+        title = self.device.ipAddress if self.device else ''
 
         if self._raw:
             ax1.plot(df['t'], df['v'], linewidth=0.8, color='steelblue')
