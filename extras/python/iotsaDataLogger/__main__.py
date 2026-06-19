@@ -14,6 +14,7 @@ def main():
     parser.add_argument("-m", "--merge", action="store_true", help="Merge CSV data into output file in stead of appending")
     parser.add_argument("--raw", action="store_true", help="Get raw per-reading data instead of daily summaries from device")
     parser.add_argument("--clean", action="store_true", help="Archive data on device after getting it")
+    parser.add_argument("--sunlight", action="store", metavar="LOCATION", help="Overlay sunshine data for the given location (implies --graph)")
     args = parser.parse_args()
     logger = DataLogger(verbose=args.verbose)
     if args.device:
@@ -33,8 +34,8 @@ def main():
         logger.write_file(args.output)
     elif not args.graph:
         logger.write_file('-')
-    if args.graph:
-        logger.graph()
+    if args.graph or args.sunlight:
+        logger.graph(sunlight_location=args.sunlight)
     if args.clean:
         print(f'{parser.prog}: --clean not yet implemented')
 
