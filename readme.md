@@ -132,4 +132,4 @@ iotsaDataLogger [-h] [-d HOST] [-D [NAME=VALUE ...]] [-i [FILE ...]]
 
 ## Sample data
 
-Some sample CSV files are in `extras/sandbox/`.
+A sample CSV file is in `extras/sandbox/`. The accuklein/accugroot battery-voltage history (the real-world use case this tool was built for) now lives in `lissabon-config/battery-health/` instead, reconstructed into daily min/max form.
