@@ -37,23 +37,23 @@ void DataStoreMemory::forget(timestamp_type ts) {
 void DataStoreMemory::toJSON(JsonObject &replyObj, bool summary)
 {
   replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
-  JsonArray values = replyObj.createNestedArray("data");
+  JsonArray values = replyObj["data"].to<JsonArray>();
 
   if (summary) {
     replyObj["count"] = nItem;
     if (nItem == 0) return;
-    JsonObject curValue = values.createNestedObject();
+    JsonObject curValue = values.add<JsonObject>();
     curValue["t"] = FORMAT_TIMESTAMP(items[0].timestamp);
     curValue["ts"] = items[0].timestamp;
     curValue["v"] = items[0].value;
-    curValue = values.createNestedObject();
+    curValue = values.add<JsonObject>();
     curValue["t"] = FORMAT_TIMESTAMP(items[nItem-1].timestamp);
     curValue["ts"] = items[nItem-1].timestamp;
     curValue["v"] = items[nItem-1].value;
     return;
   }
   for (int i=0; i<nItem; i++) {
-    JsonObject curValue = values.createNestedObject();
+    JsonObject curValue = values.add<JsonObject>();
     curValue["t"] = FORMAT_TIMESTAMP(items[i].timestamp);
     curValue["ts"] = items[i].timestamp;
     curValue["v"] = items[i].value;

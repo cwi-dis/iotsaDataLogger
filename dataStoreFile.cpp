@@ -217,7 +217,7 @@ void DataStoreFile::toJSON(JsonObject &replyObj, bool summary)
     return;
   }
   replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
-  JsonArray values = replyObj.createNestedArray("data");
+  JsonArray values = replyObj["data"].to<JsonArray>();
 
   if (summary) {
     int count = 0;
@@ -229,12 +229,12 @@ void DataStoreFile::toJSON(JsonObject &replyObj, bool summary)
       return;
     }
     count++;
-    JsonObject curValue = values.createNestedObject();
+    JsonObject curValue = values.add<JsonObject>();
     _storeRec(rec, curValue);
     while(fread(&rec, sizeof(rec), 1, fp) == 1) {
       count++;
     }
-    curValue = values.createNestedObject();
+    curValue = values.add<JsonObject>();
     _storeRec(rec, curValue);
     replyObj["count"] = count;
     fclose(fp);
@@ -244,7 +244,7 @@ void DataStoreFile::toJSON(JsonObject &replyObj, bool summary)
     DataStoreFileRecord rec;
     size_t sz = fread(&rec, sizeof(rec), 1, fp);
     if (sz != 1) break;
-    JsonObject curValue = values.createNestedObject();
+    JsonObject curValue = values.add<JsonObject>();
     _storeRec(rec, curValue);
   }
   fclose(fp);
