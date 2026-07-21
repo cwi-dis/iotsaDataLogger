@@ -107,28 +107,23 @@ bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request
   JsonObject reqObj = request.as<JsonObject>();
   bool anyChanged = false;
   bool anySet = false;
-  if (reqObj.containsKey("interval")) {
-    interval = reqObj["interval"];
+  if (getFromRequest<int>(reqObj, "interval", interval)) {
     anyChanged = true;
   }
-  if (reqObj.containsKey("adcMultiply")) {
-    adcMultiply = reqObj["adcMultiply"];
+  if (getFromRequest<float>(reqObj, "adcMultiply", adcMultiply)) {
     anyChanged = true;
   }
-  if (reqObj.containsKey("adcOffset")) {
-    adcOffset = reqObj["adcOffset"];
+  if (getFromRequest<float>(reqObj, "adcOffset", adcOffset)) {
     anyChanged = true;
   }
-  if (reqObj.containsKey("deepSleep")) {
-    deepSleep = reqObj["deepSleep"];
+  if (getFromRequest<bool>(reqObj, "deepSleep", deepSleep)) {
     anyChanged = true;
   }
-  if (reqObj.containsKey("rawRetentionDays")) {
-    rawRetentionDays = reqObj["rawRetentionDays"];
+  if (getFromRequest<int>(reqObj, "rawRetentionDays", rawRetentionDays)) {
     anyChanged = true;
   }
-  if (reqObj.containsKey("forgetBefore")) {
-    timestamp_type ts = reqObj["forgetBefore"].as<timestamp_type>();
+  timestamp_type ts;
+  if (getFromRequest<timestamp_type>(reqObj, "forgetBefore", ts)) {
     store->forget(ts);
     anySet = true;
   }
