@@ -58,6 +58,8 @@ The `extras/python/` directory contains the `iotsaDataLogger` Python tool for re
 
 ### Setup
 
+(If instructions in this repo's parent directory cover venv setup, those take precedence over the steps below.)
+
 From the repo root:
 
 ```sh
