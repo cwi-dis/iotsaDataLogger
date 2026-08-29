@@ -1,5 +1,6 @@
 .pio
 .venv
 .vscode
+.DS_Store
 __pycache__
 *.egg-info

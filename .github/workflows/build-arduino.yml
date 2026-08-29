@@ -24,11 +24,9 @@ jobs:
       matrix:
         arduino-board-fqbn:
         - esp32:esp32:esp32thing
-        partition_scheme: 
+        partition_scheme:
         - --board-options PartitionScheme=min_spiffs
-        
-#        - esp32:esp32:pico32
-      
+
     steps:
     - name: Set iotsa_ref in environment
       run: |

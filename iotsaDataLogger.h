@@ -19,21 +19,23 @@ typedef DataStoreFile DataStoreImplementation;
 //
 #define PIN_ANALOG_IN 34
 
-class IotsaDataLoggerMod : public IotsaApiMod {
+class IotsaDataLoggerMod : public IotsaModule {
 public:
   IotsaDataLoggerMod(IotsaApplication &_app)
-  : IotsaApiMod(_app),
+  : IotsaModule(_app),
     store(new DataStoreImplementation())
   {}
   void setup() override;
-  void serverSetup() override;
+  void lateSetup() override;
   void loop() override;
   String info() override;
-  using IotsaBaseMod::needsAuthentication;
+  using IotsaBaseModule::needsAuthentication;
 protected:
   void configLoad() override;
   void configSave() override;
-  void handler();
+#ifdef IOTSA_WITH_WEB
+  void webHandler() override;
+#endif
   void dataHandler();
   void dailyHandler();
   bool getHandler(const char *path, JsonObject& reply) override;

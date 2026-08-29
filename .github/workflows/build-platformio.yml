@@ -28,7 +28,6 @@ jobs:
       matrix:
         board:
         - pico32
-        - esp32thing
         build_flags: [""]
 
     steps:

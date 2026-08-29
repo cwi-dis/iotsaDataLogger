@@ -4,35 +4,35 @@
 
 #ifdef IOTSA_WITH_WEB
 void
-IotsaDataLoggerMod::handler() {
+IotsaDataLoggerMod::webHandler() {
   bool anyChanged = false;
-  if( server->hasArg("interval")) {
+  if( api.webService->server->hasArg("interval")) {
     if (needsAuthentication()) return;
-    String sInterval = server->arg("interval");
+    String sInterval = api.webService->server->arg("interval");
     interval = sInterval.toInt();
     anyChanged = true;
   }
-  if( server->hasArg("adcMultiply")) {
+  if( api.webService->server->hasArg("adcMultiply")) {
     if (needsAuthentication()) return;
-    String sv = server->arg("adcMultiply");
+    String sv = api.webService->server->arg("adcMultiply");
     adcMultiply = sv.toFloat();
     anyChanged = true;
   }
-  if( server->hasArg("adcOffset")) {
+  if( api.webService->server->hasArg("adcOffset")) {
     if (needsAuthentication()) return;
-    String sv = server->arg("adcOffset");
+    String sv = api.webService->server->arg("adcOffset");
     adcOffset = sv.toFloat();
     anyChanged = true;
   }
-  if( server->hasArg("deepSleep")) {
+  if( api.webService->server->hasArg("deepSleep")) {
     if (needsAuthentication()) return;
-    String sv = server->arg("deepSleep");
+    String sv = api.webService->server->arg("deepSleep");
     deepSleep = (bool)sv.toInt();
     anyChanged = true;
   }
-  if( server->hasArg("rawRetentionDays")) {
+  if( api.webService->server->hasArg("rawRetentionDays")) {
     if (needsAuthentication()) return;
-    String sv = server->arg("rawRetentionDays");
+    String sv = api.webService->server->arg("rawRetentionDays");
     rawRetentionDays = sv.toInt();
     anyChanged = true;
   }
@@ -69,7 +69,7 @@ IotsaDataLoggerMod::handler() {
   message += "<h2>Recent raw measurements</h2>";
   store->toHTML(message);
   message += "</body></html>";
-  server->send(200, "text/html", message);
+  api.webService->server->send(200, "text/html", message);
 }
 
 String IotsaDataLoggerMod::info() {
@@ -94,12 +94,12 @@ bool IotsaDataLoggerMod::getHandler(const char *path, JsonObject& reply) {
 
 void
 IotsaDataLoggerMod::dataHandler() {
-  store->toCSV(server);
+  store->toCSV(app.server);
 }
 
 void
 IotsaDataLoggerMod::dailyHandler() {
-  store->toCSVDaily(server);
+  store->toCSVDaily(app.server);
 }
 
 bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
@@ -144,14 +144,15 @@ void IotsaDataLoggerMod::setup() {
   analogSetPinAttenuation(PIN_ANALOG_IN, ADC_6db);
 }
 
-void IotsaDataLoggerMod::serverSetup() {
-#ifdef IOTSA_WITH_WEB
-  server->on("/datalogger", std::bind(&IotsaDataLoggerMod::handler, this));
-  server->on("/datalogger/data.csv", std::bind(&IotsaDataLoggerMod::dataHandler, this));
-  server->on("/datalogger/data_daily.csv", std::bind(&IotsaDataLoggerMod::dailyHandler, this));
-#endif
-  api.setup("/api/datalogger", true, true);
+void IotsaDataLoggerMod::lateSetup() {
   name = "datalogger";
+#ifdef IOTSA_WITH_WEB
+  // /datalogger (the module's own page) is registered by api.setup() below.
+  // The two CSV endpoints are extra routes, registered directly on the server.
+  app.server->on("/datalogger/data.csv", std::bind(&IotsaDataLoggerMod::dataHandler, this));
+  app.server->on("/datalogger/data_daily.csv", std::bind(&IotsaDataLoggerMod::dailyHandler, this));
+#endif
+  api.setup("datalogger", true, true);
 }
 
 void IotsaDataLoggerMod::configLoad() {

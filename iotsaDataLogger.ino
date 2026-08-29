@@ -60,7 +60,7 @@ IotsaDataLoggerMod iotsaDataLoggerMod(application);
 
 void setup(void){
   application.setup();
-  application.serverSetup();
+  application.lateSetup();
 #ifndef ESP32
   ESP.wdtEnable(WDTO_120MS);
 #endif
