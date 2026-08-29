@@ -3,16 +3,9 @@
 #include "iotsa.h"
 #include "iotsaApi.h"
 #include "dataStore.h"
-
-#undef WITH_MEMORY_STORE
-
-#ifdef WITH_MEMORY_STORE
-#include "dataStoreMemory.h"
-typedef DataStoreMemory DataStoreImplementation;
-#else
 #include "dataStoreFile.h"
+
 typedef DataStoreFile DataStoreImplementation;
-#endif
 
 //
 // Input pin
