@@ -3,10 +3,8 @@
 //
 
 #include "iotsa.h"
-#include "iotsaWifi.h"
 #include "iotsaNtp.h"
 #include "iotsaRtc.h"
-#include "iotsaOta.h"
 #include "iotsaFilesBackup.h"
 #include "iotsaDataLogger.h"
 
@@ -16,11 +14,8 @@
 #define PIN_DAT 22
 
 IotsaApplication application("Iotsa Data Logger Server");
-
-IotsaWifiMod wifiMod(application);                                // WiFi config
 IotsaNtpMod ntpMod(application);                                  // network time
 IotsaRtcMod rtcMod(application, PIN_ENA, PIN_CLK, PIN_DAT);        // battery-backed time
-IotsaOtaMod otaMod(application);                                  // over-the-air firmware update
 IotsaFilesBackupMod filesBackupMod(application);                  // config backup/restore
 IotsaDataLoggerMod iotsaDataLoggerMod(application);
 
