@@ -7,6 +7,7 @@
 #include "iotsaRtc.h"
 #include "iotsaFilesBackup.h"
 #include "iotsaDataLogger.h"
+#include "iotsaAnnotations.h"
 
 // DS1302 RTC wiring
 #define PIN_ENA 23
@@ -18,6 +19,7 @@ IotsaNtpMod ntpMod(application);                                  // network tim
 IotsaRtcMod rtcMod(application, PIN_ENA, PIN_CLK, PIN_DAT);        // battery-backed time
 IotsaFilesBackupMod filesBackupMod(application);                  // config backup/restore
 IotsaDataLoggerMod iotsaDataLoggerMod(application);
+IotsaAnnotationsMod annotationsMod(application);                  // free-form key/value info for tools
 
 void setup(void){
   application.setup();
