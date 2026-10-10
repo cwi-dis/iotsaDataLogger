@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "iotsaDataLogger"
-version = "0.1.0"
+version = "0.2.0"
 description = "Retrieve and graph data from an iotsaDataLogger device"
 authors = [
     {name = "Jack Jansen", email = "Jack.Jansen@cwi.nl"},
@@ -15,6 +15,7 @@ dependencies = [
     "iotsa",
     "matplotlib",
     "pandas",
+    "requests",
 ]
 
 [project.scripts]

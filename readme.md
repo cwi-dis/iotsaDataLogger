@@ -54,7 +54,7 @@ Configure the acquisition module:
 
 ## Python tool
 
-The `extras/python/` directory contains the `iotsaDataLogger` Python tool for retrieving, storing, merging, and graphing data.
+The `extras/python/` directory contains the `iotsaDataLogger` Python package and tool for retrieving, storing, merging, and graphing data. The package layers are usable on their own: `DataLoggerDevice` (device access through `iotsa`), `DataStore` (local files), and the `plot` functions (which return a matplotlib figure).
 
 ### Setup
 
@@ -80,58 +80,39 @@ pip install -e extras/python/
 
 ### Usage
 
-Retrieve current data from a device and print as CSV:
+The tool has sub-commands. Devices are named by their iotsa name (`accugroot` or `accugroot.local`), and local data for a device is kept in the data directory (`--datadir`, default the current directory) as:
+
+- `DEVICE.csv`: long-term daily min/max history (same format as the device's `/datalogger/data_daily.csv`).
+- `DEVICE-detail.csv`: raw readings from the most recent pull, overwritten every time.
+- `DEVICE.json`: optional settings for the graphs: `description`, `location` (`name`, `latitude`, `longitude`) for the sunshine overlay, and `channels` (`label`, `unit`, `thresholds`).
+
+Fetch the device's raw data, and merge it into the daily history:
 
 ```sh
-iotsaDataLogger -d yourdevice.local
+iotsaDataLogger pull yourdevice
 ```
 
-Save to a file:
+Graph the long-term daily history, with a sunshine overlay if a location is configured:
 
 ```sh
-iotsaDataLogger -d yourdevice.local -o readings.csv
+iotsaDataLogger plot yourdevice
+iotsaDataLogger plot yourdevice --sunlight Amsterdam --save history.png
 ```
 
-Merge new readings into an existing file (deduplicates and sorts by timestamp):
+Graph the raw readings from the most recent pull:
 
 ```sh
-iotsaDataLogger -d yourdevice.local -o readings.csv -m
+iotsaDataLogger recent yourdevice --days 7
 ```
 
-Graph the data:
+Print the device's daily summaries (or raw readings with `--raw`) as CSV, without storing anything:
 
 ```sh
-iotsaDataLogger -d yourdevice.local -g
+iotsaDataLogger dump yourdevice
 ```
 
-Read from a saved CSV file and graph it:
-
-```sh
-iotsaDataLogger -i readings.csv -g
-```
-
-Retrieve archived data instead of current data:
-
-```sh
-iotsaDataLogger -d yourdevice.local -a
-```
-
-### Full options
-
-```
-iotsaDataLogger [-h] [-d HOST] [-D [NAME=VALUE ...]] [-i [FILE ...]]
-                [-g] [-v] [-o FILE] [-m] [-a] [--clean]
-
-  -d HOST          Hostname or IP of the device
-  -D NAME=VALUE    Extra iotsa connection arguments (e.g. bearer token)
-  -i FILE          Read from CSV file instead of device (repeatable)
-  -o FILE          Write output to CSV file (default: stdout)
-  -m               Merge into output file instead of overwriting
-  -a               Retrieve archived data instead of current data
-  -g               Show a graph of the data
-  -v               Verbose output
-```
+Sub-commands that talk to the device accept the same connection options as the `iotsa` tool: `--protocol`, `--port`, `--noverify`, `--bearer`, `--credentials`. Use `iotsaDataLogger COMMAND --help` for details.
 
 ## Sample data
 
-A sample CSV file is in `extras/sandbox/`. The accuklein/accugroot battery-voltage history (the real-world use case this tool was built for) now lives in `lissabon-config/battery-health/` instead, reconstructed into daily min/max form.
+A sample CSV file is in `extras/sandbox/`. The accuklein/accugroot battery-voltage history (the real-world use case this tool was built for) lives in `lissabon-config/battery-health/` (private), reconstructed into daily min/max form.

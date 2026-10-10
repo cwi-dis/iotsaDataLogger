@@ -1,1 +1,2 @@
-from .data_logger import DataLogger
+from .device import DataLoggerDevice
+from .store import DataStore
