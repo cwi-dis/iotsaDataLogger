@@ -58,7 +58,13 @@ def write_raw_csv(fp: IO[str], readings: Iterable[RawReading]) -> None:
 
 
 def read_daily_csv(lines: Iterable[str]) -> DailyHistory:
-    days = {}
+    """Read daily summaries. Rows for the same date are combined.
+
+    The device can send several rows for one date: its on-the-fly summaries
+    group consecutive readings, so a clock jump back across midnight splits a
+    day (#14). Those rows cover disjoint readings, so their n values add up.
+    """
+    days: DailyHistory = {}
     for row in csv.DictReader(lines):
         d = DailySummary(
             date=row["date"],
@@ -68,6 +74,11 @@ def read_daily_csv(lines: Iterable[str]) -> DailyHistory:
             max_v=float(row["max_v"]),
             n=int(row["n"]),
         )
+        e = days.get(d.date)
+        if e is not None:
+            min_v, min_t = (d.min_v, d.min_t) if d.min_v < e.min_v else (e.min_v, e.min_t)
+            max_v, max_t = (d.max_v, d.max_t) if d.max_v > e.max_v else (e.max_v, e.max_t)
+            d = DailySummary(d.date, min_t, max_t, min_v, max_v, e.n + d.n)
         days[d.date] = d
     return days
 
