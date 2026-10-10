@@ -1,4 +1,5 @@
 """Historical sunshine data from open-meteo.com, for overlaying on solar-charged data."""
+from datetime import date
 from typing import Any, Dict, Tuple
 
 import pandas as pd
@@ -28,6 +29,10 @@ def fetch_sunlight(location: Dict[str, Any], start_date: str, end_date: str) -> 
     """
     if "latitude" not in location or "longitude" not in location:
         location = geocode(location["name"])
+    # Device clocks can run ahead (#14), and the archive rejects dates in the future (#10)
+    today = date.today().isoformat()
+    end_date = min(end_date, today)
+    start_date = min(start_date, end_date)
     resp = requests.get(
         "https://archive-api.open-meteo.com/v1/archive",
         params={
@@ -44,7 +49,8 @@ def fetch_sunlight(location: Dict[str, Any], start_date: str, end_date: str) -> 
     daily = resp.json()["daily"]
     df = pd.DataFrame({
         "date": pd.to_datetime(daily["time"]),
-        "sunshine_h": [s / 3600 for s in daily["sunshine_duration"]],
+        # The most recent days may not be in the archive yet (null)
+        "sunshine_h": [s / 3600 if s is not None else None for s in daily["sunshine_duration"]],
         "radiation": daily["shortwave_radiation_sum"],
     })
     place_name = location.get("name") or f'{location["latitude"]}, {location["longitude"]}'
