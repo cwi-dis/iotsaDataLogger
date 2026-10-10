@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple
 import iotsa
 import requests
 
+from .annotations import Annotations
 from .records import DailyHistory, RawReading, read_daily_csv, read_raw_csv
 
 
@@ -44,6 +45,20 @@ class DataLoggerDevice:
     def fetch_daily(self) -> DailyHistory:
         """The device's daily summaries, including on-the-fly ones for days still in raw form."""
         return read_daily_csv(self._get_csv("datalogger/data_daily.csv"))
+
+    def fetch_annotations(self) -> Optional[Annotations]:
+        """The device's annotations, or None if its firmware has no annotations module."""
+        try:
+            reply = self.device.protocolHandler.get("annotations")
+        except requests.exceptions.HTTPError as e:
+            if e.response is not None and e.response.status_code == 404:
+                return None
+            raise
+        return reply or {}
+
+    def set_annotations(self, annotations: Annotations) -> None:
+        """Merge annotations into the device's annotations. An empty value removes a key."""
+        self.device.protocolHandler.put("annotations", json=annotations)
 
     def _get_csv(self, path: str) -> List[str]:
         # The iotsa protocol handlers only return JSON replies, so for the CSV

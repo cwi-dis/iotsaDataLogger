@@ -52,6 +52,17 @@ Configure the acquisition module:
 - Whether to use deep sleep
 - ADC calibration: `adcMultiply` (scale factor) and `adcOffset` (offset). The ESP32 ADC is not very linear, and there is also the voltage divider to account for. In practice, if your voltage range is bounded (e.g. 10–16V for a lead-acid battery), leaving `adcOffset` at 0 and only tuning `adcMultiply` against a known reference voltage is sufficient.
 
+### Annotations
+
+The `annotations` module (`/annotations`, `/api/annotations`) stores free-form key/value strings, a bit like DNS TXT records. The device does not use them itself; they tell tools what the data is and how to present it. The Python tool understands these keys:
+
+- `description`: human-readable description, used in graph titles.
+- `location`: `LATITUDE,LONGITUDE`, for the sunshine overlay. `location.name`: place name (looked up if `location` isn't set).
+- `v.label`, `v.unit`: what the measured value is (default `Voltage`, `V`). `v` is the channel name; there is only one channel for now.
+- `v.threshold`, `v.threshold.label`: a horizontal line in the graphs, e.g. a battery's shutdown-risk voltage. More as `v.threshold.2`, `v.threshold.2.label`, and so on.
+
+The module is generic, and may move into iotsa itself.
+
 ## Python tool
 
 The `extras/python/` directory contains the `iotsaDataLogger` Python package and tool for retrieving, storing, merging, and graphing data. The package layers are usable on their own: `DataLoggerDevice` (device access through `iotsa`), `DataStore` (local files), and the `plot` functions (which return a matplotlib figure).
@@ -84,7 +95,7 @@ The tool has sub-commands. Devices are named by their iotsa name (`accugroot` or
 
 - `DEVICE.csv`: long-term daily min/max history (same format as the device's `/datalogger/data_daily.csv`).
 - `DEVICE-detail.csv`: raw readings from the most recent pull, overwritten every time.
-- `DEVICE.json`: optional settings for the graphs: `description`, `location` (`name`, `latitude`, `longitude`) for the sunshine overlay, and `channels` (`label`, `unit`, `thresholds`).
+- `DEVICE.json`: the device's annotations (see above). `pull` refreshes it from the device; for firmware without the annotations module it can be written by hand.
 
 Fetch the device's raw data (stored as `DEVICE-detail.csv`), and merge the device's daily summaries into the long-term history (older firmware without daily summaries: computed from the raw data):
 
@@ -109,6 +120,14 @@ Print the device's daily summaries (or raw readings with `--raw`) as CSV, withou
 
 ```sh
 iotsaDataLogger dump yourdevice
+```
+
+Show or change the device's annotations (this also refreshes `DEVICE.json`). An empty value removes a key. After reflashing a device, `--from-local` uploads `DEVICE.json` to it:
+
+```sh
+iotsaDataLogger annotate yourdevice
+iotsaDataLogger annotate yourdevice description="small battery" v.threshold=11.5
+iotsaDataLogger annotate yourdevice --from-local
 ```
 
 Sub-commands that talk to the device accept the same connection options as the `iotsa` tool: `--protocol`, `--port`, `--noverify`, `--bearer`, `--credentials`. Use `iotsaDataLogger COMMAND --help` for details.

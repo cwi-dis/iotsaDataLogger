@@ -3,6 +3,7 @@ import argparse
 import sys
 
 from . import records
+from .annotations import DEFAULT_CHANNEL, parse_annotations
 from .device import DataLoggerDevice, device_name
 from .store import DataStore
 
@@ -18,6 +19,15 @@ def _open_device(args) -> DataLoggerDevice:
         auth=auth,
         verbose=args.verbose,
     )
+
+
+def _load_config(store: DataStore):
+    """Presentation config from the store's annotations, and the "v" channel from it."""
+    config, warnings = parse_annotations(store.load_annotations())
+    for w in warnings:
+        print(f"{store.annotations_path}: {w}", file=sys.stderr)
+    channel = config["channels"].get("v", {**DEFAULT_CHANNEL, "thresholds": []})
+    return config, channel
 
 
 def _title(name, config) -> str:
@@ -55,13 +65,36 @@ def cmd_dump(args) -> None:
         records.write_daily_csv(sys.stdout, dev.fetch_daily())
 
 
+def cmd_annotate(args) -> None:
+    dev = _open_device(args)
+    store = DataStore(args.datadir, dev.name)
+    changes = {}
+    if args.from_local:
+        changes.update(store.load_annotations())
+    for setting in args.settings:
+        key, sep, value = setting.partition("=")
+        if not sep:
+            raise SystemExit(f"Expected KEY=VALUE, got {setting!r}")
+        changes[key] = value
+    if dev.fetch_annotations() is None:
+        raise SystemExit(f"{dev.name}: firmware has no annotations module")
+    if changes:
+        dev.set_annotations(changes)
+    annotations = dev.fetch_annotations()
+    for key in sorted(annotations):
+        print(f"{key}={annotations[key]}")
+    for w in parse_annotations(annotations)[1]:
+        print(f"{dev.name}: {w}", file=sys.stderr)
+    store.save_annotations(annotations)
+
+
 def cmd_plot(args) -> None:
     from .plot import plot_daily
     from .sunlight import fetch_sunlight
 
     name = device_name(args.device)
     store = DataStore(args.datadir, name)
-    config = store.load_config()
+    config, channel = _load_config(store)
     days = store.load_daily()
     if not days:
         raise SystemExit(f"No data in {store.daily_path}")
@@ -73,7 +106,7 @@ def cmd_plot(args) -> None:
     if location:
         sunlight = fetch_sunlight(location, min(days), max(days))
 
-    fig = plot_daily(days, _title(name, config), config["channels"][0], sunlight)
+    fig = plot_daily(days, _title(name, config), channel, sunlight)
     _show_or_save(fig, args)
 
 
@@ -82,12 +115,12 @@ def cmd_recent(args) -> None:
 
     name = device_name(args.device)
     store = DataStore(args.datadir, name)
-    config = store.load_config()
+    config, channel = _load_config(store)
     readings = store.load_detail()
     if not readings:
         raise SystemExit(f"No detail data at {store.detail_path} — run 'pull {name}' first")
 
-    fig = plot_raw(readings, _title(name, config), config["channels"][0], last_days=args.days)
+    fig = plot_raw(readings, _title(name, config), channel, last_days=args.days)
     _show_or_save(fig, args)
 
 
@@ -104,7 +137,7 @@ def main():
     # Options for sub-commands that store or read local data
     local = argparse.ArgumentParser(add_help=False)
     local.add_argument("--datadir", default=".", metavar="DIR",
-                       help="Directory holding DEVICE.csv, DEVICE-detail.csv and DEVICE.json (default: current directory)")
+                       help="Directory holding DEVICE.csv, DEVICE-detail.csv and DEVICE.json (annotations) (default: current directory)")
 
     # Options for sub-commands that talk to the device. Names match the iotsa command line tool.
     remote = argparse.ArgumentParser(add_help=False)
@@ -132,11 +165,21 @@ def main():
     p.set_defaults(func=cmd_dump)
 
     p = subparsers.add_parser(
+        "annotate", parents=[common, local, remote],
+        help="Show or change the device's annotations (and update the local copy in DEVICE.json)",
+    )
+    p.add_argument("--from-local", action="store_true",
+                   help="Upload the annotations from DEVICE.json to the device (e.g. after reflashing)")
+    p.add_argument("settings", nargs="*", metavar="KEY=VALUE",
+                   help="Annotations to set; an empty VALUE removes KEY")
+    p.set_defaults(func=cmd_annotate)
+
+    p = subparsers.add_parser(
         "plot", parents=[common, local, graph],
         help="Graph the long-term daily min/max history from DEVICE.csv, with sunshine overlay",
     )
     p.add_argument("--sunlight", metavar="LOCATION",
-                   help="Location for the sunshine overlay, overriding DEVICE.json; pass '' to disable")
+                   help="Location for the sunshine overlay, overriding the annotations; pass '' to disable")
     p.set_defaults(func=cmd_plot)
 
     p = subparsers.add_parser(

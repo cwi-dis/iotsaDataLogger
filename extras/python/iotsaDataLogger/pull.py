@@ -15,6 +15,7 @@ class PullResult:
     days_from_raw: bool  # True if the device has no daily endpoint, and days were computed from raw data
     added_days: int
     total_days: int
+    annotations_cached: bool  # False if the device has no annotations module
 
 
 def pull(dev: DataLoggerDevice, store: DataStore, verbose: bool = False) -> PullResult:
@@ -23,6 +24,7 @@ def pull(dev: DataLoggerDevice, store: DataStore, verbose: bool = False) -> Pull
     The device's daily summaries cover everything it still has: compressed days
     beyond its raw retention window, plus on-the-fly summaries of the raw days.
     Firmware without the daily endpoint gets its days computed from the raw data.
+    The device's annotations (if its firmware has them) are cached in the store.
     """
     readings = dev.fetch_raw()
     if verbose and readings:
@@ -46,6 +48,20 @@ def pull(dev: DataLoggerDevice, store: DataStore, verbose: bool = False) -> Pull
     if verbose and new_days:
         print(f"Got {len(new_days)} daily summaries ({min(new_days)} .. {max(new_days)})")
 
+    annotations = dev.fetch_annotations()
+    if annotations is None:
+        if verbose:
+            print("Device has no annotations module, keeping local annotations")
+    elif not annotations and store.load_annotations():
+        # Probably a freshly flashed device: don't throw away the local ones.
+        print(f"Warning: {dev.name} has no annotations, keeping local {store.annotations_path} "
+              f"(upload it with 'annotate --from-local {dev.name}')")
+        annotations = None
+    else:
+        store.save_annotations(annotations)
+        if verbose:
+            print(f"Wrote {len(annotations)} annotation(s) to {store.annotations_path}")
+
     existing_days = store.load_daily()
     merged = records.merge_daily(existing_days, new_days)
     store.save_daily(merged)
@@ -55,4 +71,5 @@ def pull(dev: DataLoggerDevice, store: DataStore, verbose: bool = False) -> Pull
         days_from_raw=days_from_raw,
         added_days=len(merged) - len(existing_days),
         total_days=len(merged),
+        annotations_cached=annotations is not None,
     )
