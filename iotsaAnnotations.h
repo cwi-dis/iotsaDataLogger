@@ -13,7 +13,7 @@
 // values). PUT merges the request object into it; an empty or null value
 // removes the key.
 //
-// Generic: candidate for moving into iotsa itself.
+// Generic: candidate for moving into iotsa itself, see cwi-dis/iotsa#290.
 //
 class IotsaAnnotationsMod : public IotsaModule {
 public:
