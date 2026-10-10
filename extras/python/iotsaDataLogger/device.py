@@ -48,7 +48,8 @@ class DataLoggerDevice:
     def _get_csv(self, path: str) -> List[str]:
         # The iotsa protocol handlers only return JSON replies, so for the CSV
         # endpoints we build the request ourselves from the handler's settings.
-        # Only works for the http/https handlers.
+        # Only works for the http/https handlers. Workaround, see
+        # cwi-dis/iotsaDataLogger#13, blocked on cwi-dis/iotsa#289.
         ph = self.device.protocolHandler
         url = ph.baseURL + path
         headers = {}
