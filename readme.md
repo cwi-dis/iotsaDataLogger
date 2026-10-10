@@ -86,7 +86,7 @@ The tool has sub-commands. Devices are named by their iotsa name (`accugroot` or
 - `DEVICE-detail.csv`: raw readings from the most recent pull, overwritten every time.
 - `DEVICE.json`: optional settings for the graphs: `description`, `location` (`name`, `latitude`, `longitude`) for the sunshine overlay, and `channels` (`label`, `unit`, `thresholds`).
 
-Fetch the device's raw data, and merge it into the daily history:
+Fetch the device's raw data (stored as `DEVICE-detail.csv`), and merge the device's daily summaries into the long-term history (older firmware without daily summaries: computed from the raw data):
 
 ```sh
 iotsaDataLogger pull yourdevice

@@ -35,27 +35,16 @@ def _show_or_save(fig, args) -> None:
 
 
 def cmd_pull(args) -> None:
+    from .pull import pull
+
     dev = _open_device(args)
     store = DataStore(args.datadir, dev.name)
-    readings = dev.fetch_raw()
-    if not readings:
+    result = pull(dev, store, verbose=args.verbose)
+    if not result.device_days:
         raise SystemExit(f"No data returned from {dev.host}")
-    if args.verbose:
-        print(f"Got {len(readings)} raw readings "
-              f"({records.ts_to_date(readings[0].ts)} .. {records.ts_to_date(readings[-1].ts)})")
-
-    store.save_detail(readings)
-    if args.verbose:
-        print(f"Wrote detail data to {store.detail_path}")
-
-    new_days = records.aggregate_daily(readings)
-    existing_days = store.load_daily()
-    merged = records.merge_daily(existing_days, new_days)
-    store.save_daily(merged)
-
-    added = len(merged) - len(existing_days)
-    print(f"{dev.name}: {len(new_days)} day(s) in this pull, "
-          f"{added} new day(s) added, {len(merged)} day(s) total in {store.daily_path}")
+    source = "computed from raw data" if result.days_from_raw else "from device"
+    print(f"{dev.name}: {result.device_days} day(s) {source}, "
+          f"{result.added_days} new day(s) added, {result.total_days} day(s) total in {store.daily_path}")
 
 
 def cmd_dump(args) -> None:
@@ -131,7 +120,7 @@ def main():
 
     p = subparsers.add_parser(
         "pull", parents=[common, local, remote],
-        help="Fetch the device's raw data, store it as DEVICE-detail.csv and merge daily min/max into DEVICE.csv",
+        help="Fetch the device's raw data into DEVICE-detail.csv, and merge its daily summaries into DEVICE.csv",
     )
     p.set_defaults(func=cmd_pull)
 
