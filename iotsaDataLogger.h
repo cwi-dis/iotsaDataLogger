@@ -32,7 +32,7 @@ protected:
   void dataHandler();
   void dailyHandler();
   bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
   int interval;
   float adcMultiply;
   float adcOffset;

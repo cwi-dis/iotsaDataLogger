@@ -102,7 +102,7 @@ IotsaDataLoggerMod::dailyHandler() {
   store->toCSVDaily(app.server);
 }
 
-bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
   if (!request.is<JsonObject>()) return false;
   JsonObject reqObj = request.as<JsonObject>();
   bool anyChanged = false;
@@ -130,7 +130,8 @@ bool IotsaDataLoggerMod::putHandler(const char *path, const JsonVariant& request
   if (anyChanged) {
     configSave();
   }
-  return anyChanged||anySet;
+  if ((anyChanged||anySet) && changed) *changed = true;
+  return true;
 }
 
 void IotsaDataLoggerMod::setup() {

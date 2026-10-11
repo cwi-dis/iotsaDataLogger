@@ -67,7 +67,7 @@ bool IotsaAnnotationsMod::getHandler(const char *path, JsonObject& reply) {
   return true;
 }
 
-bool IotsaAnnotationsMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool IotsaAnnotationsMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
   if (!request.is<JsonObject>()) return false;
   bool anyChanged = false;
   for (JsonPair kv : request.as<JsonObject>()) {
