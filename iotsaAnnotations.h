@@ -10,8 +10,8 @@
 // talking to the device (descriptions, location, how to present data, etc).
 //
 // REST: GET /api/annotations returns an object with all annotations (string
-// values). PUT merges the request object into it; an empty or null value
-// removes the key.
+// values). PUT merges the request object into it; an empty value removes the
+// key. Reading is open, changing needs the right "config".
 //
 // Generic: candidate for moving into iotsa itself, see cwi-dis/iotsa#290.
 //
@@ -27,12 +27,14 @@ public:
   // Returns the annotation, or an empty string if it is not set.
   String get(const String& key);
 protected:
-  bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
+  void getHandler(IotsaApiContext& ctx) override;
+  void putHandler(IotsaApiContext& ctx) override;
   void configLoad() override;
   void configSave() override;
 #ifdef IOTSA_WITH_WEB
-  void webHandler() override;
+  String webTitle() override { return "Annotations"; }
+  void formHandler_args(IotsaWebContext& ctx) override;
+  void formHandler_fields(IotsaWebContext& ctx) override;
 #endif
   bool set(const String& key, const String& value);
   std::map<String, String> annotations;

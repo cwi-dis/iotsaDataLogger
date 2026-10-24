@@ -22,17 +22,19 @@ public:
   void lateSetup() override;
   void loop() override;
   String info() override;
-  using IotsaBaseModule::needsAuthentication;
 protected:
   void configLoad() override;
   void configSave() override;
 #ifdef IOTSA_WITH_WEB
-  void webHandler() override;
+  String webTitle() override { return "Timed Data Logger"; }
+  void formHandler_args(IotsaWebContext& ctx) override;
+  void formHandler_fields(IotsaWebContext& ctx) override;
 #endif
   void dataHandler();
   void dailyHandler();
-  bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
+  void getHandler(IotsaApiContext& ctx) override;
+  void putHandler(IotsaApiContext& ctx) override;
+  template<class Ctx> void _args(Ctx& ctx);
   int interval;
   float adcMultiply;
   float adcOffset;
