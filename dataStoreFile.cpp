@@ -9,7 +9,7 @@ void DataStoreFile::add(timestamp_type ts, const dataStoreItem& value)
 {
   FILE *fp = fopen(datastoreFilename, "ab");
   if (fp == NULL) {
-    IotsaSerial.println("DataStoreFile: add: fopen failed");
+    IOTSA_LOG("dataStore", "add: fopen failed");
     return;
   }
   DataStoreFileRecord rec;
@@ -17,7 +17,7 @@ void DataStoreFile::add(timestamp_type ts, const dataStoreItem& value)
   rec.timestamp = ts;
   size_t sz = fwrite(&rec, sizeof(rec), 1, fp);
   if (sz != 1) {
-    IotsaSerial.println("DataStoreFile: add: fwrite failed");
+    IOTSA_LOG("dataStore", "add: fwrite failed");
   }
   fclose(fp);
   latestTimestamp = ts;
@@ -28,20 +28,20 @@ timestamp_type DataStoreFile::latest() {
   if (latestTimestamp != 0) return latestTimestamp;
   FILE *fp = fopen(datastoreFilename, "rb");
   if (fp == NULL) {
-    IotsaSerial.println("DataStoreFile: latest: fopen failed");
+    IOTSA_LOG("dataStore", "latest: fopen failed");
     return 0;
   }
   DataStoreFileRecord rec;
   rec.timestamp = 0;
   int sts = fseek(fp, -sizeof(rec), SEEK_END);
   if (sts != 0) {
-    IotsaSerial.println("DataStoreFile: latest: fseek failed");
+    IOTSA_LOG("dataStore", "latest: fseek failed");
   }
   long pos = ftell(fp);
   nItem = (pos / sizeof(rec))+1;
   size_t sz = fread(&rec, sizeof(rec), 1, fp);
   if (sz != 1) {
-    IotsaSerial.println("DataStoreFile: latest: fread failed");
+    IOTSA_LOG("dataStore", "latest: fread failed");
   }
   fclose(fp);
   return rec.timestamp;
@@ -60,13 +60,13 @@ void DataStoreFile::forget(timestamp_type ts) {
   (void)remove(backup);
   int sts = rename(datastoreFilename, backup);
   if (sts != 0) {
-    IotsaSerial.println("DataStoreFile: forget: cannot rename datastore file");
+    IOTSA_LOG("dataStore", "forget: cannot rename datastore file");
     return;
   }
   FILE *ifp = fopen(backup, "rb");
   FILE *ofp = fopen(datastoreFilename, "wb");
   if (ifp == NULL || ofp == NULL) {
-    IotsaSerial.println("DataStoreFile: forget: cannot open files");
+    IOTSA_LOG("dataStore", "forget: cannot open files");
     return;
   }
   while(true) {
@@ -98,14 +98,14 @@ void DataStoreFile::compress(timestamp_type now, int rawRetentionDays) {
   const char* backup = "/littlefs/datastore.001";
   (void)remove(backup);
   if (rename(datastoreFilename, backup) != 0) {
-    IotsaSerial.println("DataStoreFile: compress: cannot rename");
+    IOTSA_LOG("dataStore", "compress: cannot rename");
     return;
   }
   FILE *ifp = fopen(backup, "rb");
   FILE *ofp = fopen(datastoreFilename, "wb");
   FILE *dfp = fopen(datastoreDailyFilename, "ab");
   if (ifp == NULL || ofp == NULL || dfp == NULL) {
-    IotsaSerial.println("DataStoreFile: compress: cannot open files");
+    IOTSA_LOG("dataStore", "compress: cannot open files");
     if (ifp) fclose(ifp);
     if (ofp) fclose(ofp);
     if (dfp) fclose(dfp);
@@ -145,7 +145,7 @@ void DataStoreFile::compress(timestamp_type now, int rawRetentionDays) {
   (void)remove(backup);
   latestTimestamp = 0;
   nItem = -1;
-  IotsaSerial.println("DataStoreFile: compress: done");
+  IOTSA_LOG("dataStore", "compress: done");
 }
 
 void DataStoreFile::toCSVDaily(IotsaWebServer *server) {
@@ -213,7 +213,7 @@ void DataStoreFile::toJSON(JsonObject &replyObj, bool summary)
 {
   FILE *fp = fopen(datastoreFilename, "rb");
   if (fp == NULL) {
-    IotsaSerial.println("DataStoreFile: toJSON: fopen failed");
+    IOTSA_LOG("dataStore", "toJSON: fopen failed");
     return;
   }
   replyObj["now"] = FORMAT_TIMESTAMP(GET_TIMESTAMP());
@@ -335,7 +335,7 @@ void DataStoreFile::toCSV(IotsaWebServer *server) {
   server->sendContent("t,ts,v\r\n");
   FILE *fp = fopen(datastoreFilename, "rb");
   if (fp == NULL) {
-    IotsaSerial.println("DataStoreFile: toCSV: fopen failed");
+    IOTSA_LOG("dataStore", "toCSV: fopen failed");
     return;
   }
   while(true) {

@@ -107,7 +107,7 @@ void IotsaAnnotationsMod::configLoad() {
   JsonDocument doc;
   annotations.clear();
   if (deserializeJson(doc, json) != DeserializationError::Ok) {
-    IotsaSerial.println("annotations: cannot parse config");
+    IOTSA_LOG("annotations", "cannot parse config");
     return;
   }
   for (JsonPair kv : doc.as<JsonObject>()) {

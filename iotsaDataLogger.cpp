@@ -159,7 +159,7 @@ void IotsaDataLoggerMod::loop() {
     int pin0 = digitalRead(0);
     // Only sleep when WiFi is absent: stay awake while connected so the web UI remains accessible.
     if (!hasWifi && canSleep && pin0) {
-      IotsaSerial.println("Deep sleep.");
+      IOTSA_LOG("datalogger", "deep sleep for %d seconds", nextInterval);
       delay(10);
       esp_sleep_enable_timer_wakeup(nextInterval*1000000LL);
       esp_deep_sleep_start();
